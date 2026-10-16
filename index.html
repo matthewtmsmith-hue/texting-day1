@@ -7,7 +7,7 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="robots" content="noindex,nofollow">
-<meta name="tg-build" content="2026-10-16 08:47 BST · day1 web">
+<meta name="tg-build" content="2026-10-16 12:12 BST · day1 web">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <link rel="icon" href="data:,">
 <meta name="theme-color" content="#0d0f14">
@@ -403,6 +403,310 @@ window.DAYS[1] = {
                  { text: "night", reply: ["night"] } ] }
   ] }
 };
+
+</script>
+<script>
+// Clip sources (story bible §22.1) -> TEMPORARY Loop Guard stand-ins (scene name = mp4 base name = EDI gallery Name).
+// Laptop build only plays these. Pages build shows placeholder cards. Swap SCENE_* for Yui clips later.
+window.CLIP_SOURCES = {
+  soft_s01: "SCENE_JAKE_TVRACK_STANDING_1",
+  soft_s02: "SCENE_JAKE_SHOWER_LEAN_1",
+  pool_c01: "SCENE_ROBERT_WORKAREA_SITTING_1",
+  pool_c06: "SCENE_ROBERT_WORKAREA_BJ_1",
+  pool_c05: "SCENE_BOSS_WORKAREA_SPOON_1",
+  pool_c07: "SCENE_BOSS_WORKAREA_RIDE_1",
+  pool_c02: "SCENE_JAKE_COWGIRL_1",
+  pool_c03: "SCENE_JAKE_TVRACK_BOUNCE_1",
+  pool_a01: "SCENE_BOSS_FINAL_SUCK_1",
+  naive_c04: "SCENE_ROBERT_ELECTRICAL_COWGIRL_BOUNCE_1",
+  desperate_c04: "SCENE_BOSS_OFFICE_RD_DOGGY_1",
+  guilt_c04: "SCENE_ROBERT_WORKAREA_DOGGY_BEND_1",
+  encouraged_c04: "SCENE_BOSS_LOCKER_BATHROOM_RIDE_1",
+  naive_c05: "SCENE_JAKE_FINAL_MISSIONARY_1",
+  desperate_c05: "SCENE_ROBERT_FINAL_DOGGY_1",
+  guilt_c05: "SCENE_BOSS_LOCKER_MATEPRESS_1",
+  encouraged_c05: "SCENE_BOSS_FINAL_COWGIRL_1",
+  naive_c06: "SCENE_ROBERT_FINAL_MISSIONARY_1",
+  desperate_c06: "SCENE_JAKE_FINAL_REV_DOGGY_1",
+  guilt_c06: "SCENE_BOSS_LOCKER_MISSIONARY_1",
+  encouraged_c06: "SCENE_JAKE_FINAL_DOGGY_1"
+};
+// Per day: [source or {route:source}, beat label]. Route-keyed resolves against S.route at fire time.
+const R4 = s => ({ Naive: 'naive_' + s, Desperate: 'desperate_' + s, Guilt: 'guilt_' + s, Encouraged: 'encouraged_' + s });
+window.CLIP_CALENDAR = {
+  2: [["soft_s01", "D2 evening"]],
+  3: [["soft_s02", "D3 after the kiss"]],
+  4: [["pool_c01", "D4 evening"], ["pool_c06", "D4b late night"]],
+  5: [["pool_c05", "D5 evening"], ["pool_c07", "D5b late night"]],
+  6: [["pool_c02", "D6 beat 1"], ["pool_c03", "D6 beat 2"], [R4("c04"), "D6 beat 3 (climax)"]],
+  7: { // Visit beats: discovery (cross-route c04), centrepiece (A c05 / B c06), aftermath
+    discovery: { Naive: "guilt_c04", Desperate: "naive_c04", Guilt: "encouraged_c04", Encouraged: "desperate_c04" },
+    A: R4("c05"), B: R4("c06"), aftermath: "pool_a01" }
+};
+window.ENDINGS = {
+  Naive: { A: "The Lesson", B: "Office Hours" }, Desperate: { A: "Read, No Reply", B: "Third Wheel" },
+  Guilt: { A: "Evidence", B: "Locked Out" }, Encouraged: { A: "Breakfast for Three", B: "Delivery Boy" }
+};
+
+</script>
+<script>
+// Day 1 dialogue for "Last Train Home". Drop-in for window.DAYS[1] in game/day1/data/day1.js.
+// Same keys and beat/choice/chore fields as the placeholder file. window.GAME_DATA stays in data/day1.js.
+// ASCII only: emoji icons are written as \u escapes so they still render.
+// Every route starts on Naive, so Day 1 has no route-gated lines. The one Desperate line uses the existing
+// cond {minN, maxL, any} gate, exactly as the placeholder did.
+// Ages per bible: Yui 19, Sora 20, Rika 20, Kenji 24, Haruto 21. All adults.
+window.DAYS = window.DAYS || {};
+window.DAYS[1] = {
+  title: "Day 1 \u00b7 Move-in",
+  apartment: {
+    start: { morning: "futon", evening: "genkan" },
+    chores: [
+      { id: "breakfast", spot: "stove", slots: ["morning"], label: "\u{1F373} Make breakfast", dur: 4, setFlag: "d1_breakfast", st: "plate",
+        options: [ { key: "toast", icon: "\u{1F35E}", line: "Two slices of toast, a bit burnt round the edges. It's fine. It's breakfast." },
+                   { key: "eggs", icon: "\u{1F373}", line: "You try tamagoyaki. You get scrambled eggs. Nobody has to know." },
+                   { key: "onigiri", icon: "\u{1F359}", line: "Tuna mayo onigiri from the fridge. You eat it standing up, reading her last text again." } ] },
+      { id: "dinner", spot: "stove", slots: ["evening"], label: "\u{1F35C} Make dinner", dur: 5, setFlag: "d1_dinner", st: "plate",
+        options: [ { key: "ramen", icon: "\u{1F35C}", line: "Cup ramen. You eat it before the three minutes are up." },
+                   { key: "curry", icon: "\u{1F35B}", line: "Mom's leftover curry. Yui always said it was better than her own mom's." },
+                   { key: "bento", icon: "\u{1F371}", line: "A half-price bento from the konbini. The rice is cold in the middle." } ],
+        hook: { once: true, placeholder: false, beat: { id: "h_dinner", from: "Yui", tier: "minor", text: "did you eat dinner?? don't lie to me",
+          choicesByFlag: { flag: "d1_dinner",
+            ramen: [ { text: "cup ramen. living the dream", reply: ["sora please eat a vegetable this week"] }, { text: "yeah I ate", reply: ["good"] } ],
+            curry: [ { text: "your mom's favourite, my mom's curry", reply: ["that's so unfair, I'm eating konbini salad"] }, { text: "yeah I ate", reply: ["good"] } ],
+            bento: [ { text: "the half-price bento lol", reply: ["the 8pm sticker bento. a classic"] }, { text: "yeah I ate", reply: ["good"] } ] } } } },
+      { id: "coffee", spot: "kettle", slots: ["morning"], label: "\u2615 Make coffee", dur: 3, icon: "\u2615", st: "mug", stVal: "coffee",
+        lines: [ "Instant coffee. Two spoons, because today's a long one." ] },
+      { id: "tea", spot: "kettle", slots: ["evening"], label: "\u{1F375} Make tea", dur: 3, icon: "\u{1F375}", st: "mug", stVal: "tea",
+        lines: [ "Genmaicha. She left half a box of it here last month." ] },
+      { id: "tv", spot: "tv", slots: ["morning", "evening"], label: "\u{1F4FA} Watch TV", dur: 5, icon: "\u{1F4FA}", st: "tv",
+        lines: [ "Morning news: a goat escaped in Matsumoto and police say it is \"doing well\".",
+                 "Weather: sunny in Minase. A typhoon is forming somewhere south of Okinawa.",
+                 "A travel show about Koenji. Vintage shops, tiny bars, students everywhere. You change the channel.",
+                 "A cooking show makes curry look easy. It isn't.",
+                 "A variety show. A comedian eats very spicy ramen and instantly regrets it." ],
+        hook: { once: true, slot: "morning", placeholder: false, beat: { id: "h_tv", from: "Haruto", tier: "ambient", text: "are you watching the news?? the matsumoto goat is my hero" } } },
+      { id: "game", spot: "console", slots: ["evening"], label: "\u{1F3AE} Play a game", dur: 6, icon: "\u{1F3AE}",
+        lines: [ "One round of a kart racer. You lose to the CPU on the easiest setting.", "You finally clear a level you've been stuck on for a week. You go to text Yui, then don't." ] },
+      { id: "shower", spot: "shower", slots: ["morning", "evening"], label: "\u{1F6BF} Shower", dur: 5, icon: "\u{1F6BF}", st: "steam",
+        lines: [ "Hot water, finally. You think about Yui on the shinkansen, watching the mountains go past.", "The shower takes a minute to warm up. Her shampoo is still on the shelf." ] },
+      { id: "teeth", spot: "sink", slots: ["morning", "evening"], label: "\u{1FAA5} Brush teeth", dur: 3, icon: "\u{1FAA5}", lines: [ "Two minutes. You manage about forty seconds." ] },
+      { id: "jacket", spot: "closet", slots: ["morning"], label: "\u{1F9E5} Put on HayaEats jacket", dur: 2, icon: "\u{1F9E5}", setFlag: "d1_dressed", st: "dressed",
+        lines: [ "The HayaEats jacket. Very orange. Every ten deliveries is another few minutes with her in Tokyo." ] },
+      { id: "plant", spot: "plant", slots: ["morning", "evening"], label: "\u{1FAB4} Water the plant", dur: 2, icon: "\u{1F4A7}", st: "watered",
+        lines: [ "Yui gave you this plant and made you promise to keep it alive. So far so good." ] },
+      { id: "window", spot: "window", slots: ["morning", "evening"], label: "\u{1FA9F} Look outside", dur: 3, icon: "\u{1FA9F}",
+        linesBySlot: { morning: [ "Rice fields, the slow local train, and old Mr Sato on his bike.", "Blue sky. Tokyo is three hours that way." ],
+                       evening: [ "The konbini sign glows across the road. The last local train rattles past.", "Quiet. You can hear the frogs in the paddies." ] } },
+      { id: "desk", spot: "desk", slots: ["morning", "evening"], label: "\u{1F4BB} Check the trip fund", dur: 2, icon: "\u{1F4BB}", lines: [ "You open the shinkansen booking page, look at the price, and close it again." ] },
+      { id: "door", spot: "genkan", slots: ["morning", "evening"], special: "door" },
+      // bed: special handler. lines are optional flavour shown before the reflection line, if the engine reads them.
+      { id: "bed", spot: "futon", slots: ["morning", "evening"], special: "bed",
+        lines: [ "The futon feels too big tonight, which is stupid. She was never here every night anyway." ] }
+    ]
+  },
+  morning: { startClock: "07:10", endClock: "13:00", beats: [
+    { id: "m01", from: "Mom", tier: "minor", delay: 1,
+      text: "morning love. Yui goes to Tokyo today doesn't she? tell her good luck from me",
+      choices: [ { text: "yeah she's on the shinkansen now, I'll tell her", reply: ["good. and eat something before work"] },
+                 { text: "will do", reply: ["x"] } ] },
+    { id: "m02", from: "Yui", tier: "ambient", delay: 3, text: "omg I'm actually on the shinkansen. this is real" },
+    { id: "m03", from: "Yui", tier: "minor", delay: 2,
+      text: "the lady next to me has been eating ekiben since Nagano lol",
+      choices: [ { text: "lol what did she get", reply: ["some kind of eel thing?? it smells so good and I'm starving"] },
+                 { text: "jealous, I've only had toast", reply: ["toast?? please eat properly today"] } ] },
+    { id: "m04", from: "Haruto", tier: "minor", delay: 4,
+      text: "you working today or are you going to sit there staring at your phone waiting for Yui",
+      choices: [ { text: "working, I've got the afternoon shift", reply: ["respect. that 50k isn't going to earn itself"] },
+                 { text: "both probably lol", reply: ["dude..."] } ] },
+    { id: "m05", from: "Yui", tier: "ambient", delay: 6, text: "I'm here!! Tokyo is SO big, I already got lost in Shinjuku station",
+      media: { id: "all_P01", kind: "photo", caption: "Move-in selfie with boxes" } },
+    { id: "m06", from: "Yui", tier: "key", pivotal: true, delay: 1,
+      text: "made it to the flat!! Rika's boyfriend came over to help with my boxes, isn't that sweet",
+      choices: [
+        { type: "wholesome", text: "you made it!! so proud of you. text me once you're settled ok?", reply: ["I will!! I miss you already"] },
+        { type: "forgiving", text: "that's nice of him. I trust you to look after yourself out there", reply: ["thank you for not being all worried about it lol"] },
+        { type: "encouraging", text: "go have fun with them, don't worry about texting me loads today", reply: ["wait really? ok lol I'll tell you everything later"] },
+        { type: "protective", text: "who's the guy? just be careful with people you've only just met", reply: ["you worry too much lol. he's Rika's bf, he's just being nice!"] }
+      ],
+      pushback: { cold: { type: "cold", text: "nice. busy rn", think: [8, 12], hesitate: true, reply: ["oh ok. talk later then"] },
+                  jealous: { type: "jealous", text: "why is some guy carrying your stuff", reply: ["because he's Rika's boyfriend?? he's helping, that's all"] } } },
+    { id: "m07", from: "Yui", tier: "key", delay: 4,
+      text: "he's carrying literally everything lol. his name's Kenji, he's 24 and doing a master's at Seiran",
+      media: { id: "all_P02", kind: "photo", caption: "Kenji carrying boxes up the stairs" },
+      choices: [
+        { type: "wholesome", text: "that's really kind of him. make sure you carry something too lol", reply: ["I carried the pillows, that counts"] },
+        { type: "encouraging", text: "let him do all of it, free labour", reply: ["lol that's exactly what Rika said"] },
+        { type: "protective", text: "he's keen. you've known him about ten minutes, just keep an eye on him", reply: ["he's Rika's boyfriend silly. apparently he's basically always here anyway"] }
+      ] },
+    { id: "m08", from: "Mom", tier: "minor", delay: 3, text: "did you eat breakfast? and please don't ride like a maniac today",
+      choices: [ { text: "I had toast, I'll be careful", reply: ["toast isn't breakfast. be careful x"],
+                   textByFlag: { flag: "d1_breakfast", none: "not yet, I'll grab something. I'll be careful", toast: "I had toast, I'll be careful",
+                                 eggs: "I made eggs actually! I'll be careful", onigiri: "I had an onigiri, I'll be careful" },
+                   replyByFlag: { flag: "d1_breakfast", none: ["eat something before you get on that bike"], eggs: ["look at you. be careful x"] } },
+                 { text: "yes mom", reply: ["don't 'yes mom' me"] } ] },
+    { id: "m09", from: "Yui", tier: "minor", delay: 5, text: "ok my room is tiny but the window looks straight at a vending machine lol",
+      choices: [ { text: "vending machine view, very Tokyo", reply: ["it glows at night, it's going to be my nightlight"] },
+                 { text: "send me a pic when it's set up", reply: ["I will once it stops looking like a warehouse"] } ] },
+    { id: "m10", from: "Yui", tier: "ambient", delay: 4, text: "Rika is so nice btw. she made me tea before I'd even taken my shoes off" },
+    { id: "m11", from: "Yui", tier: "key", delay: 3, hesitate: true, text: "do you think I'll actually make friends here",
+      choices: [
+        { type: "wholesome", text: "you will. people are going to love you, just be yourself", reply: ["you always know what to say"] },
+        { type: "forgiving", text: "course you will. and don't feel bad if you're out a lot, I get it", reply: ["you're the best, seriously"] },
+        { type: "cold", text: "you'll be fine", think: [7, 11], hesitate: true, reply: ["yeah ok"] }
+      ] },
+    { id: "m12", from: "Haruto", tier: "ambient", delay: 4, text: "shift's at 1 right? Ren was bragging he got every station order yesterday" },
+    { id: "m13", from: "Yui", tier: "ambient", delay: 3, text: "we're going to the konbini for snacks, text you in a bit" }
+  ] },
+  shift: { startClock: "13:00", beats: [
+    { id: "s01", from: "Yui", tier: "minor", at: 6, text: "unpacking is the worst thing ever invented",
+      choices: [ { text: "lol you have like three boxes", reply: ["FIVE boxes thank you"] },
+                 { text: "want me to come and do it for you", reply: ["yes please. get on the next shinkansen"] } ] },
+    { id: "s02", from: "HayaEats", tier: "ambient", at: 14, text: "Orders picked up. Ride safe!" },
+    { id: "s03", from: "Yui", tier: "ambient", at: 24, text: "room tour!! it's tiny but it's mine",
+      media: { id: "d1_roomtour", kind: "photo", caption: "Yui's small room, half unpacked" } },
+    { id: "s04", from: "Yui", tier: "key", at: 34, text: "Kenji's giving me a campus tour rn. my tour guide lol",
+      media: { id: "naive_P12", kind: "photo", caption: "Campus-tour selfie at the Seiran gate, Kenji leaning in, hand on her shoulder" },
+      choices: [
+        { type: "wholesome", text: "cute!! the campus looks huge, don't get lost", reply: ["I'd 100% get lost without him lol"] },
+        { type: "jealous", text: "why has he got his hand on you", reply: ["what?? it's his hand on my shoulder, he's like that with everyone"] },
+        { type: "protective", text: "he's very hands-on for a guy with a girlfriend", reply: ["Rika says he's like that with everyone, it's fine I promise"] }
+      ] },
+    { id: "s05", from: "Haruto", tier: "ambient", at: 48, text: "just saw Ren fly down the shotengai lol he's going to kill a granny one day" },
+    { id: "s06", from: "Yui", tier: "minor", at: 60, text: "Seiran has a whole building that's just the library. I'm going to live there",
+      choices: [ { text: "nerd", reply: ["proud nerd thank you"] },
+                 { text: "that sounds amazing", reply: ["it smells like old books, I'm obsessed"] } ] },
+    { id: "s07", from: "Daichi", channel: "insta", tier: "ambient", at: 80,
+      text: "Kenji's been 'helping someone move' since 9am. the dishes at Sakuragaoka aren't going to wash themselves" },
+    { id: "s08", from: "Yui", tier: "minor", at: 95, text: "did you eat lunch?? you'd better have",
+      choices: [ { text: "konbini onigiri between orders", reply: ["acceptable"] },
+                 { text: "not yet, I'm working", reply: ["SORA. eat something"] } ] }
+  ] },
+  lateShift: { beats: [
+    { id: "l01", from: "Yui", tier: "minor", at: 10, text: "wait you're working NOW??",
+      choices: [ { text: "just a quick one, it's for the trip", reply: ["ok ok. get home safe"] },
+                 { text: "yeah", reply: ["oh. ok"] } ] },
+    { id: "l02", from: "HayaEats", tier: "ambient", at: 30, text: "Late shift: pay x0.6 tonight." }
+  ] },
+  evening: { startClock: "18:30", endClock: "23:30", secPerDelay: 7, beats: [
+    { id: "e01", from: "Yui", tier: "ambient", delay: 1, text: "back at the flat. my legs are dead from walking round campus all afternoon" },
+    { id: "e02", from: "Yui", tier: "minor", delay: 2, text: "first night in my own room!!",
+      media: { id: "all_P03", kind: "photo", caption: "Desk selfie, a grey hoodie on the chair behind her" },
+      choices: [ { text: "you look so happy", reply: ["I am!!"] },
+                 { text: "whose hoodie is that lol", reply: ["oh it's Kenji's, he took it off when he was carrying stuff. I'll give it back to him tomorrow"], set: { asked_hoodie: true } } ] },
+    { id: "e03", from: "Rika", channel: "insta", tier: "ambient", delay: 3, text: "new flatmate secured. welcome to Koenji @yui.hnmr",
+      media: { id: "d1_rika_post", kind: "photo", caption: "Rika and Yui with canned chuhai on the sofa" } },
+    { id: "e04", from: "Mom", tier: "minor", delay: 3, text: "how was work? did you make much?",
+      choices: [ { text: "not bad, it's all going in the trip fund", reply: ["good boy. Yui's lucky"] },
+                 { text: "it was ok", reply: ["ok love. go to bed early"] } ] },
+    { id: "e05", from: "Yui", tier: "key", delay: 4, hesitate: true, text: "can I call you? I want to hear your voice before I sleep",
+      choices: [
+        { type: "call_now", text: "calling you now", call: true, reply: ["that was so nice. I really needed that"] },
+        { type: "call_later", text: "can we do it later? I'm wiped", reply: ["oh. ok, later then"] }
+      ] },
+    { id: "e06", from: "Yui", tier: "key", pivotal: true, delay: 3,
+      text: "Kenji said if I need anything I can just text him, he's round here half the time anyway lol",
+      choices: [
+        { type: "wholesome", text: "glad you've got people looking out for you. be safe ok?", reply: ["I will!! and thank you for being so chill about Kenji helping"] },
+        { type: "forgiving", text: "it's fine, I trust you", reply: ["I know you do. thank you for not being weird about it"] },
+        { type: "encouraging", text: "lol he sounds fun, enjoy", reply: ["you're so weird lol. he IS kind of funny though ngl"] },
+        { type: "protective", text: "careful with him. older guys who 'help' usually want something", reply: ["you worry too much. he's Rika's bf, he's just nice!"] }
+      ],
+      pushback: { cold: { type: "cold", text: "k", think: [9, 14], hesitate: true, reply: ["ok"] },
+                  jealous: { type: "jealous", text: "why is a guy with a girlfriend hanging round you", reply: ["he's not hanging round ME, he's here for Rika?? why are you being like this"] } } },
+    { id: "e07", from: "Haruto", tier: "minor", delay: 3, text: "so how's Tokyo girl",
+      choices: [ { text: "she's settled in, she sounds really happy", reply: ["good. don't get all mopey on me then"] },
+                 { text: "dunno, she's busy with her flatmates", reply: ["dude... call her"] } ] },
+    { id: "e08", from: "Yui", tier: "ambient", delay: 2, cond: { minN: 35, maxL: 40, any: true },
+      text: "it's so quiet here without you", media: { id: "desperate_P01", kind: "photo", caption: "Lonely room, lights off" } },
+    { id: "e09", from: "Yui", tier: "minor", delay: 3, text: "ok I'm actually going to sleep now. night night",
+      choices: [ { text: "night. I'm proud of you today. sleep well", reply: ["love you"] },
+                 { text: "night", reply: ["night"] } ] }
+  ] }
+};
+
+</script>
+
+
+
+
+
+
+<script>
+// PLACEHOLDER Days 2–7. Structure cloned from Day 1 (apartment, shift). Lines are stand-ins until the
+// Dialogue Writer's /dialogue/dayN.js files land; any file that sets window.DAYS[n] replaces these.
+(function () {
+  const D1 = window.DAYS[1], T = { 2: "Cooking lesson", 3: "Welcome party (LIVE)", 4: "Essay \"help\"", 5: "The argument", 6: "Typhoon night (LIVE)", 7: "The visit" };
+  const cal = window.CLIP_CALENDAR || {};
+  for (let n = 2; n <= 7; n++) {
+    if (window.DAYS[n]) continue;
+    const clips = n < 7 ? (cal[n] || []) : [];
+    const ev = [
+      { id: `p${n}e01`, from: "Yui", tier: "minor", delay: 3, placeholder: true, text: `[PLACEHOLDER D${n}] home! today was a lot 😮‍💨`,
+        choices: [{ text: "tell me everything", reply: ["later 🙈"] }, { text: "glad you're home", reply: ["💕"] }] }
+    ];
+    clips.forEach(([src, label], i) => ev.push({ id: `p${n}c${i + 1}`, from: "Yui", tier: "ambient", delay: 4, placeholder: true,
+      text: `[PLACEHOLDER] ${label}`, media: { id: `d${n}_clip${i + 1}`, kind: "clip", src, caption: label } }));
+    ev.push({ id: `p${n}e99`, from: "Yui", tier: "minor", delay: 3, placeholder: true, text: `[PLACEHOLDER D${n}] night night 💕`,
+      choices: [{ text: "night", reply: ["😴"] }] });
+    window.DAYS[n] = { title: `Day ${n} · ${T[n]}`, placeholder: true, apartment: D1.apartment, shift: D1.shift,
+      morning: { startClock: "07:10", endClock: "13:00", beats: [
+        { id: `p${n}m01`, from: "Yui", tier: "minor", delay: 3, placeholder: true, text: `[PLACEHOLDER D${n}] morning!! ☀️`,
+          choices: [{ text: "morning 💕", reply: ["🥹"] }, { text: "mm, morning", reply: ["sleepy lol"] }] },
+        { id: `p${n}m02`, from: "Haruto", tier: "ambient", delay: 4, placeholder: true, text: `[PLACEHOLDER D${n}] shift today?` } ] },
+      evening: { startClock: "18:30", endClock: "23:30", secPerDelay: 7, beats: ev } };
+  }
+})();
+
+</script>
+<script>
+// Clip player + EDI wrapper. LAPTOP_MEDIA is false unless the laptop index sets it before this script.
+window.LAPTOP_MEDIA = !!window.LAPTOP_MEDIA;
+window.TG_EDI = (function () { // same pattern as Loop Guard build/js/edi.js
+  const LS_URL = 'tg-edi-url', LS_MUTE = 'tg-edi-mute', DEFAULT_URL = 'http://localhost:5000';
+  let url = localStorage.getItem(LS_URL) || DEFAULT_URL, muted = localStorage.getItem(LS_MUTE) === '1';
+  const base = () => (url || DEFAULT_URL).replace(/\/$/, '');
+  function fire(p) { if (!window.LAPTOP_MEDIA || muted) return Promise.resolve(); const h = base() + p;
+    return fetch(h, { method: 'POST', mode: 'no-cors' }).catch(() => fetch(h, { method: 'GET', mode: 'no-cors' }).catch(() => {})); }
+  const play = n => { if (n) fire('/Edi/Play/' + encodeURIComponent(n)); };
+  const stop = () => fire('/Edi/Stop');
+  const idle = () => (muted ? stop() : play('idle'));
+  return { play, stop, idle, url: () => url, setUrl: u => { url = u || DEFAULT_URL; localStorage.setItem(LS_URL, url); },
+    isMuted: () => muted, setMuted: on => { muted = !!on; localStorage.setItem(LS_MUTE, muted ? '1' : '0'); muted ? stop() : idle(); } };
+})();
+window.TG_MEDIA = (function () {
+  const LS_VP = 'tg-video-path';
+  const vpath = () => localStorage.getItem(LS_VP) || window.VIDEO_PATH_DEFAULT || 'media/';
+  function resolve(src, route) { // src: source id, {Route: id}, or a SCENE_ name
+    if (src && typeof src === 'object') src = src[route] || src.Naive;
+    const scene = (window.CLIP_SOURCES || {})[src] || src; return { src, scene };
+  }
+  let el = null, onDone = null, closed = true;
+  function exit(why) { if (closed) return; closed = true; try { TG_EDI.idle(); } catch (e) {} // every exit path → idle()
+    if (el) { const v = el.querySelector('video'); if (v) { v.pause(); v.removeAttribute('src'); v.load(); } el.remove(); el = null; }
+    const cb = onDone; onDone = null; if (cb) cb(why); }
+  function open(src, route, caption, done) {
+    exit('replaced'); const r = resolve(src, route); onDone = done || null; closed = false;
+    el = document.createElement('div'); el.id = 'clipview';
+    el.style.cssText = 'position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,.92);display:flex;flex-direction:column;align-items:center;justify-content:center;color:#eee;font:14px system-ui';
+    const cap = `<div style="margin:8px;opacity:.8">${(caption || '').replace(/[<>&]/g, '')}</div>`;
+    const btn = '<button id="clipSkip" style="margin-top:10px;padding:8px 18px">✕ Close / skip</button>';
+    if (!window.LAPTOP_MEDIA) {
+      el.innerHTML = `<div style="border:2px dashed #888;border-radius:12px;padding:30px 40px;text-align:center;max-width:80vw">🎬 <b>Clip placeholder</b><br><span style="opacity:.7">${r.src}</span>${cap}<div style="opacity:.5;font-size:12px">Clips only play in the laptop build.</div></div>${btn}`;
+    } else {
+      el.innerHTML = `<video playsinline autoplay controls style="max-width:94vw;max-height:80vh;background:#000"></video>${cap}<div style="opacity:.5;font-size:11px">${r.src} → ${r.scene} (temp stand-in)</div>${btn}`;
+      const v = el.querySelector('video'); v.src = vpath() + r.scene + '.mp4';
+      v.addEventListener('playing', () => TG_EDI.play(r.scene), { once: true });
+      v.addEventListener('ended', () => exit('ended')); v.addEventListener('error', () => { exit('error'); window.toast && toast('Clip failed to load: ' + r.scene); });
+      v.play().catch(() => {}); // needs a user gesture; the ▶ tap provides it
+    }
+    document.body.appendChild(el);
+    el.querySelector('#clipSkip').onclick = () => exit('skip');
+    document.addEventListener('keydown', function k(e) { if (e.key === 'Escape') { document.removeEventListener('keydown', k); exit('skip'); } });
+  }
+  window.addEventListener('beforeunload', () => { if (!closed) TG_EDI.idle(); });
+  return { open, exit, resolve, vpath, setVideoPath: p => localStorage.setItem(LS_VP, p) };
+})();
 
 </script>
 <script>
@@ -1479,7 +1783,13 @@ function renderTypingPill() {
   if (el.dataset.h !== html) { el.dataset.h = html; el.innerHTML = html; el.style.display = html ? 'block' : 'none'; }
 }
 function top(title, sub) { return `<div class="ptop"><button class="back" data-go="${S.phone.screen.startsWith('chat:') ? 'chats' : 'home'}">‹</button><div class="title">${esc(title)}${sub ? `<div class="sub">${esc(sub)}</div>` : ''}</div></div>`; }
-function photoHTML(md) { return `<div class="photo"><b>📷 ${esc(md.id)}</b>${esc(md.caption || '')}</div>`; }
+function photoHTML(md) {
+  if (md.kind === 'clip') return `<div class="photo clipcard" data-clip='${esc(JSON.stringify(md.src || md.id))}' data-cap="${esc(md.caption || '')}" style="cursor:pointer"><b>▶ 🎬 ${esc(md.id)}</b>${esc(md.caption || '')}${window.LAPTOP_MEDIA ? '' : '<div class="muted" style="font-size:11px">clip placeholder (laptop build plays it)</div>'}</div>`;
+  return `<div class="photo"><b>📷 ${esc(md.id)}</b>${esc(md.caption || '')}</div>`;
+}
+document.addEventListener('click', e => { const c = e.target.closest('[data-clip]'); if (!c) return; e.stopPropagation();
+  let src; try { src = JSON.parse(c.dataset.clip); } catch (x) { src = c.dataset.clip; }
+  const was = paused; paused = true; TG_MEDIA.open(src, S.route, c.dataset.cap, () => { paused = was; }); }, true);
 function msgHTML(m) {
   if (m.sys) return `<div class="msg sys">${esc(m.text)}</div>`;
   return `<div class="msg ${m.me ? 'me' : ''}">${m.media ? photoHTML(m.media) : ''}${esc(m.text)}<div class="t">${fmtClock(m.t)}${m.me ? ' · 既読' : ''}${m.resolved === 'missed' ? ' · missed' : ''}</div></div>`;
@@ -1633,6 +1943,19 @@ function toEvening(fromLate) {
   else { S.clock = S.eveClock ?? S.clock; if (S.eveningQ) { S.q = S.eveningQ; S.q.segFrom = S.clock; S.q.segReal = 0; } }
   startRoom('evening'); openPhone('home'); renderControls(); save();
 }
+function nextDay() {
+  S.day++; S.startMeters = { ...S.meters }; S.q = null; S.pending = null; S.keyQueue = []; S.outbox = []; S.minors = [];
+  S.lateDone = false; S.harutoDone = false; S.shifts = []; S.earned = 0; S.spent = 0; world = null; hideOverlay(); save(); toMorning();
+}
+function showEnding() { // Day 7 / CP8: Visit 3-beat climax, clips per §22.3
+  const r = S.route, m = S.meters, ab = { Naive: m.L >= 55 ? 'A' : 'B', Desperate: m.N >= 30 ? 'A' : 'B', Guilt: m.L >= 50 ? 'A' : 'B', Encouraged: m.E >= 60 ? 'B' : 'A' }[r] || 'A';
+  const cal = window.CLIP_CALENDAR[7], name = (window.ENDINGS[r] || {})[ab] || '';
+  const beats = [['Beat 1 · discovery', cal.discovery[r]], ['Beat 2 · centrepiece', cal[ab]], ['Beat 3 · aftermath', cal.aftermath]];
+  showOverlay(`<h2>🏁 Ending: ${esc(r)} ${ab}, "${esc(name)}"</h2><p class="muted">[PLACEHOLDER ending text until Day 7 dialogue lands]</p>
+    ${beats.map(([l, src]) => photoHTML({ id: l, kind: 'clip', src, caption: `${r} ${ab} · ${l}` })).join('')}
+    <div class="row"><button class="primary" id="again">New game</button></div>`);
+  $('again').onclick = () => { localStorage.removeItem(SAVE_KEY); S = newState(); world = null; hideOverlay(); toMorning(); };
+}
 function sleep() {
   if (!canSleep()) return;
   const before = { ...S.meters };
@@ -1650,15 +1973,17 @@ function showSummary() {
   const m = S.meters, s0 = S.startMeters;
   const row = k => { const d = m[k] - s0[k]; return `<tr><td>${{ L: 'Love', I: 'Innocence', E: 'Encourage', N: 'Neglect' }[k]}</td><td>${s0[k]} → <b>${m[k]}</b></td><td class="${(k === 'N' ? -d : d) > 0 ? 'good' : d !== 0 ? 'bad' : ''}">${d > 0 ? '+' : ''}${d}</td></tr>`; };
   const lean = { Naive: S.lean.wholesome, Guilt: S.lean.forgiving, Encouraged: S.lean.encouraging, Desperate: S.lean.cold + S.lean.jealous };
-  showOverlay(`<h2>🌙 End of Day 1</h2><p><i>"${esc(S.reflection)}"</i></p>
+  if (S.day >= 7) return showEnding();
+  showOverlay(`<h2>🌙 End of Day ${S.day}</h2><p><i>"${esc(S.reflection)}"</i></p>
     <table class="sum">${S.shifts.map(s => `<tr><td>${s.late ? 'Late' : 'Afternoon'} shift (${s.diff})</td><td colspan="2">${yen(s.total)}</td></tr>`).join('')}
     <tr><td>Earned</td><td colspan="2" class="good">${yen(S.earned)}</td></tr><tr><td>Spent</td><td colspan="2" class="bad">${yen(S.spent)}</td></tr>
     <tr><td>Trip fund</td><td colspan="2"><b>${yen(S.money)}</b> / ${yen(C.tripTarget)}</td></tr></table>
     <h3 style="margin:10px 0 2px">Meters</h3><table class="sum">${['L', 'I', 'E', 'N'].map(row).join('')}</table>
     <p>Route at CP1: <b>${S.route}</b>${S.routeEval !== S.route ? ` <span class="bad">(drifting toward ${S.routeEval}; you'll get a warning on Day 2)</span>` : ''}</p>
     <p class="muted" style="font-size:13px">Lean: Naive ${lean.Naive} · Guilt ${lean.Guilt} · Encouraged ${lean.Encouraged} · Desperate ${lean.Desperate} · Protective 🛡️ ${S.lean.protective} (no route weight)</p>
-    <p class="muted">Day 2 isn't built yet.</p>
-    <div class="row"><button class="primary" id="again">Play Day 1 again</button></div>`);
+    <p class="muted">Next: ${esc((window.DAYS[S.day + 1] || {}).title || '')}${(window.DAYS[S.day + 1] || {}).placeholder ? ' (placeholder dialogue)' : ''}</p>
+    <div class="row"><button class="primary" id="nextday">Continue to Day ${S.day + 1} ▶</button><button id="again">New game</button></div>`);
+  $('nextday').onclick = () => nextDay();
   $('again').onclick = () => { localStorage.removeItem(SAVE_KEY); S = newState(); world = null; hideOverlay(); toMorning(); };
 }
 function showOverlay(html) { ocard.innerHTML = html; ov.style.display = 'flex'; }
@@ -1763,7 +2088,7 @@ function title() {
   const saved = load();
   showOverlay(`<h2>Last Train Home</h2><p class="muted">Day 1 · Move-in. Yui's moving to Tokyo for uni. You're staying in Minase, doing HayaEats deliveries to save ${yen(C.tripTarget)} so you can visit her.</p>
     <p class="muted" style="font-size:13px">Personal prototype. Placeholder art. Progress saves on this device.</p>
-    <p class="muted" style="font-size:11px;opacity:.7" id="buildStamp">2026-10-16 08:47 BST · day1 web</p>
+    <p class="muted" style="font-size:11px;opacity:.7" id="buildStamp">2026-10-16 12:12 BST · day1 web</p>
     <div class="diff">${saved && saved.slot !== 'title' ? '<button class="primary" id="cont">Continue</button>' : ''}<button ${saved && saved.slot !== 'title' ? '' : 'class="primary"'} id="newg">New game</button></div>`);
   if ($('cont')) $('cont').onclick = () => { S = saved; resume(); };
   $('newg').onclick = () => { localStorage.removeItem(SAVE_KEY); S = newState(); hideOverlay(); toMorning(); };
@@ -1795,7 +2120,7 @@ function frame(t) {
   requestAnimationFrame(frame);
 }
 window.addEventListener('resize', resize);
-window.__game = { skipAhead, tickShift, get room() { return room; }, roomAction, get S() { return S; }, get world() { return world; }, answer, action, startShift, sleep, toShiftSelect, keys, joy };
+window.__game = { skipAhead, tickShift, get room() { return room; }, roomAction, get S() { return S; }, get world() { return world; }, answer, action, startShift, sleep, toShiftSelect, keys, joy, nextDay, showSummary, showEnding, newState, setS: v => { S = v; } };
 resize(); title(); requestAnimationFrame(frame);
 })();
 
