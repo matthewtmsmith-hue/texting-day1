@@ -7,7 +7,7 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="robots" content="noindex,nofollow">
-<meta name="tg-build" content="2026-10-16 07:14 BST · day1 web">
+<meta name="tg-build" content="2026-10-16 07:31 BST · day1 web">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <link rel="icon" href="data:,">
 <meta name="theme-color" content="#0d0f14">
@@ -73,7 +73,15 @@
   .shopitem { display: flex; justify-content: space-between; align-items: center; gap: 8px; padding: 10px 0; border-bottom: 1px solid #222; }
   #debug { position: absolute; left: 8px; right: 8px; top: calc(env(safe-area-inset-top) + 56px); max-height: 70%; overflow: auto; background: rgba(0,0,0,.92); border: 1px solid #555; border-radius: 12px; padding: 10px; font: 12px/1.45 ui-monospace, Consolas, monospace; z-index: 40; display: none; touch-action: pan-y; }
   #debug .bar { height: 8px; background: #333; border-radius: 4px; margin: 2px 0 6px; } #debug .bar div { height: 100%; border-radius: 4px; }
-  #debugBtn { position: absolute; left: 50%; transform: translateX(-50%); top: calc(env(safe-area-inset-top) + 4px); z-index: 41; opacity: .55; min-height: 40px; padding: 6px 10px; font-size: 13px; }
+  #debugBtn { position: absolute; left: 0; top: 46%; z-index: 41; opacity: .28; min-height: 34px; width: 30px; padding: 0; font-size: 14px; border-radius: 0 10px 10px 0; -webkit-touch-callout: none; }
+  #dbgClose { position: sticky; top: 0; float: right; min-height: 52px; min-width: 110px; font-size: 18px; font-weight: 700; background: #c0392b; border-color: #e66; z-index: 2; margin: 0 0 6px 8px; }
+  .dots { display: inline-flex; gap: 3px; margin-left: 6px; vertical-align: middle; }
+  .dots i, .typingb i { width: 7px; height: 7px; border-radius: 50%; background: #9aa0b4; display: inline-block; animation: dot 1.2s infinite; }
+  .dots i:nth-child(2), .typingb i:nth-child(2) { animation-delay: .2s; } .dots i:nth-child(3), .typingb i:nth-child(3) { animation-delay: .4s; }
+  @keyframes dot { 0%,60%,100% { transform: translateY(0); opacity: .45; } 30% { transform: translateY(-4px); opacity: 1; } }
+  .typingb { display: inline-flex; gap: 5px; padding: 12px 16px; width: auto; }
+  .tyhint { margin: 0 20px 14px; padding: 10px 14px; background: #1d2230; border-radius: 14px; color: #cfd3e0; }
+  #typingPill { position: absolute; top: calc(env(safe-area-inset-top) + 56px); left: 50%; transform: translateX(-50%); background: rgba(20,20,28,.9); border: 1px solid #444; border-radius: 16px; padding: 5px 12px; font-size: 13px; z-index: 22; display: none; pointer-events: none; white-space: nowrap; }
 </style>
 
 <style id="ios-fs-hide">
@@ -93,9 +101,10 @@
   </div>
   <div id="phone" class="closed"></div>
   <div id="banner"></div>
+  <div id="typingPill"></div>
   <div id="overlay"><div class="card" id="ocard"></div></div>
   <div id="debug"></div>
-  <button id="debugBtn" title="Debug panel (` or F2)">🐞</button>
+  <button id="debugBtn" title="Debug: long-press (or ` / F2)">🐞</button>
 </div>
 <script>
 // Day 1 content for "Last Train Home" prototype.
@@ -104,14 +113,45 @@
 //   id, from, tier: key|minor|ambient, text, media {id, kind:'photo'|'clip', caption}
 //   delay: in-game minutes after the previous beat fired (or after the previous key was answered)
 //   at: (shift only) real seconds into the shift
-//   choices: [{text, type, reply:[lines], set:{flag:value}}]
+//   choices: [{text, type, reply:[lines], set:{flag:value}, think:[min,max] sec, hesitate:true}]
+//   hesitate: true on a beat = she starts/stops/starts typing before it lands; gapSec overrides the real gap
 //   pivotal: true, pushback: {cold:{...}, jealous:{...}} (picks the push-back that matches the player's tone)
 //   cond: {minN, maxL, any:true}  optional gate (route-only lines)
 //   channel: 'line' (default) or 'insta'
 window.GAME_DATA = {
   config: {
-    gameSecondsPerRealSecond: 20,     // 1 real second = 20 in-game seconds
-    minorWindowMin: 10,
+    shiftGameSecPerReal: 20,          // shift only: 1 real second = 20 in-game seconds (the 2:00 timer is real time)
+    // Morning/Evening clock: no fixed rate. Each slot's clock runs from startClock to endClock and is scaled so
+    // the LAST text of the slot lands exactly at endClock (13:00 shift start, 23:30 bedtime). See slot fields below.
+    pacing: {
+      secPerDelay: 6,          // real seconds per 1 unit of a beat's `delay` (beats can override with gapSec)
+      typeSecPerChar: 0.045, typeMin: 1.2, typeMax: 5,   // how long the typing bubble shows
+      hesTypeSec: [0.8, 1.8], hesGapSec: [1.2, 3],      // hesitation: start typing, stop, start again
+      holdMarginMin: 6, holdCreep: 0.08,  // while she waits on an answer the clock creeps, never past next text - 6 min
+      followUpSec: [1.2, 2.6], // gap between multi-line replies
+      longPauseMult: 2.2,
+      // Her thinking time before she starts typing a reply, by the type of thing Sora said.
+      // sec: [min,max] real seconds · hes: chance to start/stop/start typing · long: chance of a long pause (×longPauseMult)
+      think: {
+        wholesome:   { sec: [1.0, 2.2], hes: 0.05, long: 0.05 },
+        encouraging: { sec: [2.0, 4.0], hes: 0.35, long: 0.15 },
+        forgiving:   { sec: [1.5, 3.0], hes: 0.15, long: 0.1 },
+        protective:  { sec: [3.0, 5.5], hes: 0.45, long: 0.2 },
+        cold:        { sec: [5.0, 8.0], hes: 0.5,  long: 0.45 },
+        jealous:     { sec: [5.5, 9.0], hes: 0.65, long: 0.35 },
+        call_now:    { sec: [1.0, 2.0], hes: 0,    long: 0 },
+        call_later:  { sec: [4.5, 7.5], hes: 0.5,  long: 0.4 },
+        minor:       { sec: [0.9, 2.2], hes: 0.05, long: 0.05 },
+        missed:      { sec: [0.6, 1.4], hes: 0.2,  long: 0 },
+        impatience:  { sec: [0.4, 1.0], hes: 0.1,  long: 0 },
+        default:     { sec: [1.5, 3.0], hes: 0.1,  long: 0.05 }
+      },
+      // real-second timers (replace the old in-game-minute ones outside shifts too)
+      impatienceSec: [25, 55, 95, 150],  // "??", "hello", "wow ok", annoyed
+      waitCostSec: 25,                   // N+1 per this many seconds a key waits (cap N+6)
+      fastReplySec: 15,                  // L+1 if she gets an answer this fast
+      minorWindowSec: 50
+    },
     shiftSeconds: 120,
     startMoney: 3000,
     tripTarget: 50000,
@@ -177,7 +217,7 @@ window.GAME_DATA = {
 window.DAYS = window.DAYS || {};
 window.DAYS[1] = {
   title: "Day 1 · Move-in",
-  morning: { startClock: "07:10", beats: [
+  morning: { startClock: "07:10", endClock: "13:00", beats: [
     { id: "m01", from: "Mom", tier: "minor", delay: 1,
       text: "morning love. Yui gets to Tokyo today doesn't she? tell her good luck from me",
       choices: [ { text: "yeah she's on the shinkansen now, I'll tell her", reply: ["good. and eat something before work"] },
@@ -201,7 +241,7 @@ window.DAYS[1] = {
         { type: "encouraging", text: "go enjoy it, don't worry about texting me loads today 😏", reply: ["wait really? ok lol I'll tell you everything later 😳"] },
         { type: "protective", text: "who's the guy? just be a bit careful with people you've only just met ok 🛡️", reply: ["aww you worry too much 🥹 he's Rika's bf, he's just being nice!"] }
       ],
-      pushback: { cold: { type: "cold", text: "nice. busy rn", reply: ["oh ok… talk later then"] },
+      pushback: { cold: { type: "cold", text: "nice. busy rn", think: [8, 12], hesitate: true, reply: ["oh ok… talk later then"] },
                   jealous: { type: "jealous", text: "why is some guy carrying your stuff‼️", reply: ["because he's Rika's boyfriend?? he's just helping"] } } },
     { id: "m07", from: "Yui", tier: "key", delay: 4,
       text: "Rika's bf is carrying EVERYTHING lol. his name's Kenji, he's 24 and he's doing a master's at Seiran",
@@ -218,11 +258,11 @@ window.DAYS[1] = {
       choices: [ { text: "a vending machine view, very Tokyo", reply: ["it glows at night, it's going to be my nightlight 😂"] },
                  { text: "send me a pic once it's set up", reply: ["I will when it doesn't look like a warehouse lol"] } ] },
     { id: "m10", from: "Yui", tier: "ambient", delay: 4, text: "Rika is so nice btw, she's already made me tea" },
-    { id: "m11", from: "Yui", tier: "key", delay: 3, text: "do you think I'll actually make friends here 🥺",
+    { id: "m11", from: "Yui", tier: "key", delay: 3, hesitate: true, text: "do you think I'll actually make friends here 🥺",
       choices: [
         { type: "wholesome", text: "you will, people are going to love you. just be yourself 🌸", reply: ["you always know what to say 🥹"] },
         { type: "forgiving", text: "of course you will, and don't feel bad if you're out a lot, I get it 🫂", reply: ["you're the best, seriously"] },
-        { type: "cold", text: "you'll be fine", reply: ["…yeah ok"] }
+        { type: "cold", text: "you'll be fine", think: [7, 11], hesitate: true, reply: ["…yeah ok"] }
       ] },
     { id: "m12", from: "Haruto", tier: "ambient", delay: 4, text: "shift's at 1 right? Ren was bragging that he got all the station orders yesterday" },
     { id: "m13", from: "Yui", tier: "ambient", delay: 3, text: "we're going to the konbini for snacks, I'll text you in a bit 💕" }
@@ -257,7 +297,7 @@ window.DAYS[1] = {
                  { text: "yeah", reply: ["oh. ok"] } ] },
     { id: "l02", from: "HayaEats", tier: "ambient", at: 30, text: "Late shift: pay ×0.6 tonight." }
   ] },
-  evening: { startClock: "18:30", beats: [
+  evening: { startClock: "18:30", endClock: "23:30", secPerDelay: 7, beats: [
     { id: "e01", from: "Yui", tier: "ambient", delay: 1, text: "back at the flat, my legs are dead from walking round campus 😩" },
     { id: "e02", from: "Yui", tier: "minor", delay: 2, text: "first night in my own room!!",
       media: { id: "all_P03", kind: "photo", caption: "Desk selfie, a grey hoodie on the chair behind her" },
@@ -268,7 +308,7 @@ window.DAYS[1] = {
     { id: "e04", from: "Mom", tier: "minor", delay: 3, text: "how was work? did you make much?",
       choices: [ { text: "not bad, it's all going in the trip fund", reply: ["good boy. Yui's lucky"] },
                  { text: "it was ok", reply: ["ok love. go to bed early"] } ] },
-    { id: "e05", from: "Yui", tier: "key", delay: 4, text: "can I call you? I want to hear your voice before I sleep",
+    { id: "e05", from: "Yui", tier: "key", delay: 4, hesitate: true, text: "can I call you? I want to hear your voice before I sleep",
       choices: [
         { type: "call_now", text: "calling you now 📞", call: true, reply: ["that was so nice 🥹 I needed that"] },
         { type: "call_later", text: "can we do it later? I'm wiped", reply: ["oh. ok, later then"] }
@@ -281,7 +321,7 @@ window.DAYS[1] = {
         { type: "encouraging", text: "lol he sounds fun, enjoy 😏", reply: ["lol you're so weird 😳 he IS kind of funny though ngl"] },
         { type: "protective", text: "careful with him, older guys who 'help' usually want something", reply: ["aww you worry too much 🥹 he's Rika's bf, he's just nice!"] }
       ],
-      pushback: { cold: { type: "cold", text: "k", reply: ["…ok"] },
+      pushback: { cold: { type: "cold", text: "k", think: [9, 14], hesitate: true, reply: ["…ok"] },
                   jealous: { type: "jealous", text: "why's a guy with a gf hanging round you", reply: ["he's not hanging round ME, he's here for Rika?? why are you being like this"] } } },
     { id: "e07", from: "Haruto", tier: "minor", delay: 3, text: "so how's Tokyo girl",
       choices: [ { text: "she's settled in, she sounds really happy", reply: ["good. don't get all mopey on me then"] },
@@ -300,7 +340,7 @@ window.DAYS[1] = {
 (function () {
 'use strict';
 const GD = window.GAME_DATA, C = GD.config, AR = GD.archetypes, CT = GD.contacts;
-const SAVE_KEY = 'ltth_day1_save_v1';
+const SAVE_KEY = 'ltth_day1_save_v2';
 const $ = id => document.getElementById(id);
 const cv = $('cv'), ctx = cv.getContext('2d');
 const phoneEl = $('phone'), ov = $('overlay'), ocard = $('ocard'), ctrl = $('controls');
@@ -312,7 +352,6 @@ const fmtClock = s => { s = Math.floor(s / 60); return String(Math.floor(s / 60)
 const ROUTE_TYPES = { wholesome: 'Naive', forgiving: 'Guilt', encouraging: 'Encouraged', cold: 'Desperate', jealous: 'Desperate' };
 
 let S = null;            // saved state
-let outbox = [];         // {due: realMs, msg} typing delays (not saved; flushed on save)
 let world = null;        // shift world (not saved)
 let keys = {}, joy = { x: 0, y: 0, on: false };
 let paused = false, lastT = performance.now(), saveTimer = 0, uiTimer = 0;
@@ -321,13 +360,12 @@ let callUntil = 0;
 function newState() {
   return { v: 1, day: 1, slot: 'title', clock: hm('07:00'), meters: { ...C.startMeters }, startMeters: { ...C.startMeters },
     money: C.startMoney, earned: 0, spent: 0, lean: { wholesome: 0, forgiving: 0, encouraging: 0, cold: 0, jealous: 0, protective: 0 },
-    flags: {}, msgs: [], seq: 0, unread: {}, feedUnread: 0, q: null, pending: null, keyQueue: [], minors: [],
+    flags: {}, msgs: [], seq: 0, rt: 0, outbox: [], extraBeats: {}, unread: {}, feedUnread: 0, q: null, pending: null, keyQueue: [], minors: [],
     shifts: [], gifts: [], route: 'Naive', routeEval: 'Naive', harutoDone: false, lateDone: false,
     phone: { open: true, screen: 'home' }, log: [] };
 }
 function save() {
   if (!S) return;
-  outbox.forEach(o => pushMsg(o.msg, true)); outbox = [];
   try { localStorage.setItem(SAVE_KEY, JSON.stringify(S)); } catch (e) {}
 }
 function load() { try { const j = localStorage.getItem(SAVE_KEY); return j ? JSON.parse(j) : null; } catch (e) { return null; } }
@@ -374,12 +412,6 @@ function pushMsg(m, silent) {
   renderPhone(true);
 }
 function isGlanceBlocked() { return false; }
-function sendFrom(from, text, extra, delayMs) {
-  const msg = Object.assign({ chat: from, from, text }, extra || {});
-  if (from === 'Yui' && msg.channel !== 'insta') { outbox.push({ due: performance.now() + (delayMs ?? 1300), msg }); renderPhone(); }
-  else if (delayMs) outbox.push({ due: performance.now() + delayMs, msg });
-  else pushMsg(msg);
-}
 function notify(m) {
   const b = $('banner'); const name = (CT[m.from] || { name: m.from }).name;
   let prev = m.channel === 'insta' ? `${name} posted` : (m.media ? '📷 Photo' : m.text.slice(0, 40) + (m.text.length > 40 ? '…' : ''));
@@ -388,6 +420,45 @@ function notify(m) {
   b.onclick = () => { b.style.display = 'none'; openPhone(m.channel === 'insta' ? 'insta' : 'chat:' + m.chat); };
   const st = $('stage'); st.className = ''; void st.offsetWidth; st.className = m.kind === 'key' ? 'buzz3' : m.kind === 'minor' ? 'buzz2' : 'buzz1';
   if (navigator.vibrate) try { navigator.vibrate(m.kind === 'key' ? [400] : m.kind === 'minor' ? [80, 60, 80] : [60]); } catch (e) {}
+}
+
+/* ---------- composing / typing ---------- */
+const PC = () => C.pacing;
+const rr = a => Array.isArray(a) ? a[0] + Math.random() * (a[1] - a[0]) : (a || 0);
+const typeDur = t => clamp((t || '').length * PC().typeSecPerChar, PC().typeMin, PC().typeMax);
+const PEOPLE = m => m.channel !== 'insta' && m.from !== 'HayaEats';
+function compose(msg, think, hes, startAt) {
+  const t0 = (startAt ?? S.rt) + Math.max(0, think || 0), segs = []; let t = t0;
+  if (PEOPLE(msg)) {
+    if (hes) { const n = Math.random() < 0.35 ? 2 : 1; for (let i = 0; i < n; i++) { const a = rr(PC().hesTypeSec); segs.push([t, t + a]); t += a + rr(PC().hesGapSec); } }
+    const d = typeDur(msg.text); segs.push([t, t + d]); t += d;
+  }
+  const e = { msg, segs, due: t }; S.outbox.push(e); S.outbox.sort((a, b) => a.due - b.due); renderPhone(true); return e;
+}
+function estCompose(b) { const h = b.hesitate ? 2.3 + 1.3 : 0; return PEOPLE(b) ? typeDur(b.text) + h : 0; }
+function typingNow(chat) { return S.outbox.some(e => e.msg.chat === chat && e.segs.some(s => S.rt >= s[0] && S.rt < s[1])); }
+function typingChats() { return [...new Set(S.outbox.filter(e => e.segs.some(s => S.rt >= s[0] && S.rt < s[1])).map(e => e.msg.chat))]; }
+function composingPeople() { return S.outbox.some(e => PEOPLE(e.msg)); }
+function sendFrom(from, text, extra, think, hes, startAt) {
+  const msg = Object.assign({ chat: from, from, text }, extra || {});
+  return compose(msg, think ?? 0, hes, startAt);
+}
+function thinkFor(type, ch) {
+  const cfg = PC().think[type] || PC().think.default;
+  let t = ch && ch.think ? rr(ch.think) : rr(cfg.sec);
+  if (!(ch && ch.think) && Math.random() < cfg.long) t *= PC().longPauseMult;
+  const hes = ch && ch.hesitate != null ? ch.hesitate : Math.random() < cfg.hes;
+  return { t, hes };
+}
+function sendReplies(from, lines, type, ch, extraDelay) {
+  const th = thinkFor(type, ch); let e = null;
+  lines.forEach((r, i) => { e = i === 0 ? sendFrom(from, r, { kind: 'reply' }, th.t + (extraDelay || 0), th.hes) : sendFrom(from, r, { kind: 'reply' }, rr(PC().followUpSec), false, e.due); });
+  return e;
+}
+function landOutbox() {
+  if (!S.outbox.length) return;
+  const due = S.outbox.filter(e => e.due <= S.rt); if (!due.length) return;
+  S.outbox = S.outbox.filter(e => e.due > S.rt); due.forEach(e => pushMsg(e.msg));
 }
 
 /* ---------- beats ---------- */
@@ -400,6 +471,7 @@ function condOk(b) {
 function findBeat(id) {
   const d = day();
   for (const k of ['morning', 'shift', 'lateShift', 'evening']) { const b = d[k].beats.find(x => x.id === id); if (b) return b; }
+  return (S.extraBeats || {})[id];
 }
 function choicesFor(b) {
   const list = b.choices.slice();
@@ -410,83 +482,85 @@ function choicesFor(b) {
   return list;
 }
 function fireBeat(b) {
-  const extra = { media: b.media, channel: b.channel, kind: b.tier, beat: b.id };
-  if (b.tier === 'minor') {
-    sendFrom(b.from, b.text, extra);
-    // window opens when it actually lands
-    S.minors.push({ beat: b.id, from: b.from, openedAt: null, deadline: null, slot: S.slot });
-  } else sendFrom(b.from, b.text, extra);
+  sendFrom(b.from, b.text, { media: b.media, channel: b.channel, kind: b.tier, beat: b.id }, 0, b.hesitate);
+  if (b.tier === 'minor') S.minors.push({ beat: b.id, from: b.from, openedAt: null, deadline: null, slot: S.slot });
 }
-function readyKey(b, origin) {
-  S.pending = { beat: b.id, readyAt: S.clock, fired: false, steps: 0, origin };
-}
+function readyKey(b, origin) { S.pending = { beat: b.id, readyRt: S.rt, readyClock: S.clock, fired: false, steps: 0, origin }; }
 function fireKeyNow() {
-  const p = S.pending, b = findBeat(p.beat);
-  p.fired = true; p.firedAt = S.clock;
-  sendFrom(b.from, b.text, { media: b.media, kind: 'key', beat: b.id, pivotal: !!b.pivotal }, 700);
+  const p = S.pending, b = findBeat(p.beat); p.fired = true;
+  sendFrom(b.from, b.text, { media: b.media, kind: 'key', beat: b.id, pivotal: !!b.pivotal }, 0.4, b.hesitate);
 }
-function startQueue(slot) {
-  const d = day()[slot]; S.q = { slot, idx: 0, nextAt: S.clock + (d.beats[0]?.delay || 0) * 60, blocked: false, t0: 0 };
+function slotTimes(slot) {
+  const d = day()[slot], start = hm(d.startClock), end = hm(d.endClock || d.startClock); let cum = 0;
+  const c = d.beats.map(b => cum += (b.delay || 1)); return c.map(v => start + (v / cum) * (end - start));
 }
-function tickQueue() {
+function beatGap(slot, b) { const d = day()[slot]; return b.gapSec ?? (b.delay || 1) * (d.secPerDelay || PC().secPerDelay); }
+function startQueue(slot) { S.q = { slot, idx: 0, segReal: 0, segFrom: S.clock, fired: null, blocked: false }; }
+function tickQueue(dt) {
   const q = S.q; if (!q) return;
   const beats = day()[q.slot].beats;
   if (q.slot === 'shift' || q.slot === 'lateShift') {
     if (!world) return;
     while (q.idx < beats.length && world.elapsed >= beats[q.idx].at) {
-      const b = beats[q.idx++];
-      if (!condOk(b)) continue;
+      const b = beats[q.idx++]; if (!condOk(b)) continue;
       if (b.tier === 'key') S.keyQueue.push(b.id); else fireBeat(b);
     }
     return;
   }
-  if (q.blocked || q.idx >= beats.length || S.clock < q.nextAt) return;
-  const b = beats[q.idx];
-  if (b.tier === 'key') {
-    if (S.pending) return;            // one key at a time
-    q.idx++; readyKey(b, q.slot); q.blocked = true;
-  } else {
-    q.idx++; if (condOk(b)) fireBeat(b);
-    if (q.idx < beats.length) q.nextAt = S.clock + beats[q.idx].delay * 60;
+  if (q.idx >= beats.length) return;
+  const T = slotTimes(q.slot), target = T[q.idx], b = beats[q.idx];
+  if (q.fired) { // this beat is being typed; keep the clock gliding to its time, then mark it landed
+    q.segReal += dt; S.clock = Math.max(S.clock, q.segFrom + (target - q.segFrom) * clamp(q.segReal / q.gap, 0, 1));
+    if (!S.msgs.some(m => m.beat === b.id && !m.me)) return;
+    S.clock = Math.max(S.clock, target); q.fired = null; q.idx++; q.segReal = 0; q.segFrom = S.clock;
+    if (b.tier === 'key') q.blocked = true;
+    return;
+  }
+  const hold = q.blocked || composingPeople() || (b.tier === 'key' && S.pending);
+  if (hold) { // she's waiting on him (or still typing a reply): clock creeps, never reaches the next text's time
+    const lim = target - PC().holdMarginMin * 60; if (S.clock < lim) S.clock += (lim - S.clock) * Math.min(1, dt * PC().holdCreep);
+    q.segReal = 0; q.segFrom = S.clock; return;
+  }
+  if (!condOk(b)) { q.idx++; q.segReal = 0; q.segFrom = S.clock; return; }
+  const G = beatGap(q.slot, b); q.gap = G; q.segReal += dt;
+  S.clock = Math.max(S.clock, q.segFrom + (target - q.segFrom) * clamp(q.segReal / G, 0, 1));
+  if (q.segReal >= G - estCompose(b)) {
+    q.fired = b.id;
+    if (b.tier === 'key') { readyKey(b, q.slot); fireKeyNow(); } else fireBeat(b);
   }
 }
-function unblockQueue() {
-  const q = S.q; if (!q || !q.blocked) return;
-  q.blocked = false; const beats = day()[q.slot].beats;
-  if (q.idx < beats.length) q.nextAt = S.clock + (beats[q.idx].delay || 1) * 60;
-}
-function slotScriptDone() { const q = S.q; return !q || q.idx >= day()[q.slot].beats.length; }
+function unblockQueue() { const q = S.q; if (q && q.blocked) { q.blocked = false; q.segReal = 0; q.segFrom = S.clock; } }
+function slotScriptDone() { const q = S.q; return !q || (q.idx >= day()[q.slot].beats.length && !q.fired); }
 function leaveSlot() {
-  // carry unfired keys, drop the rest
   const q = S.q; if (!q) return;
   const beats = day()[q.slot].beats;
-  for (let i = q.idx; i < beats.length; i++) if (beats[i].tier === 'key' && condOk(beats[i])) S.keyQueue.push(beats[i].id);
-  q.blocked = false; S.q = null;
+  for (let i = q.idx + (q.fired ? 1 : 0); i < beats.length; i++) if (beats[i].tier === 'key' && condOk(beats[i])) S.keyQueue.push(beats[i].id);
+  S.q = null;
 }
 
-/* ---------- key/minor timers ---------- */
+/* ---------- key/minor timers (real seconds) ---------- */
 function tickTimers() {
-  const p = S.pending;
-  if (!p && S.keyQueue.length) { const b = findBeat(S.keyQueue.shift()); readyKey(b, 'carried'); }
+  if (!S.pending && S.keyQueue.length) { const b = findBeat(S.keyQueue.shift()); if (b) readyKey(b, 'carried'); }
   if (S.pending && !S.pending.fired && isSafe()) fireKeyNow();
-  if (S.pending && S.pending.fired) {
-    const waitMin = (S.clock - S.pending.readyAt) / 60, imp = C.impatience;
-    while (S.pending.steps < imp.length && waitMin >= imp[S.pending.steps].min) {
-      const step = imp[S.pending.steps++]; sendFrom('Yui', step.text, { kind: 'imp' }, 400);
-      if (S.pending.steps <= 3) addM({ L: -1 }, 'impatience');
+  const p = S.pending;
+  if (p && p.fired && S.msgs.some(m => m.beat === p.beat && !m.me)) {
+    const wait = S.rt - p.readyRt, imp = C.impatience, sec = PC().impatienceSec;
+    if (p.steps < imp.length && wait >= sec[p.steps] && !composingPeople()) {
+      const step = imp[p.steps++], th = thinkFor('impatience');
+      sendFrom('Yui', step.text, { kind: 'imp' }, th.t, th.hes);
+      if (p.steps <= 3) addM({ L: -1 }, 'impatience');
     }
   }
   for (const m of S.minors.slice()) {
-    if (m.openedAt == null) { // has the message landed yet?
-      const landed = S.msgs.find(x => x.beat === m.beat && !x.me);
-      if (landed) { m.openedAt = S.clock; m.deadline = S.clock + C.minorWindowMin * 60; } else continue;
+    if (m.openedAt == null) {
+      if (S.msgs.some(x => x.beat === m.beat && !x.me)) { m.openedAt = S.rt; m.deadline = S.rt + PC().minorWindowSec; } else continue;
     }
-    if (S.clock >= m.deadline) {
+    if (S.rt >= m.deadline) {
       S.minors.splice(S.minors.indexOf(m), 1);
       const msg = S.msgs.find(x => x.beat === m.beat && !x.me); if (msg) msg.resolved = 'missed';
       if (m.from === 'Yui') {
-        const inShift = m.slot === 'shift' || S.slot === 'shift';
-        sendFrom('Yui', inShift ? GD.missedMinor.shift : GD.missedMinor.home, { kind: 'missed' }, 300);
+        const inShift = m.slot === 'shift' || S.slot === 'shift', th = thinkFor('missed');
+        sendFrom('Yui', inShift ? GD.missedMinor.shift : GD.missedMinor.home, { kind: 'missed' }, th.t, th.hes);
         if (!inShift) addM({ N: 3, L: -1 }, 'missed minor');
       }
       renderPhone(true);
@@ -496,12 +570,12 @@ function tickTimers() {
 function answer(beatId, idx) {
   if (!isSafe()) return;
   const b = findBeat(beatId); const msg = S.msgs.find(x => x.beat === beatId && !x.me);
-  if (!msg || msg.resolved) return;
+  if (!b || !msg || msg.resolved) return;
   if (b.tier === 'key') {
-    const ch = choicesFor(b)[idx], p = S.pending || { readyAt: S.clock };
-    const waitMin = (S.clock - p.readyAt) / 60;
-    addM({ N: Math.min(6, Math.floor(waitMin / 3)) }, 'waited ' + waitMin.toFixed(1) + 'm');
-    if (waitMin < 2) addM({ L: 1 }, 'fast reply');
+    const ch = choicesFor(b)[idx], p = S.pending || { readyRt: S.rt }; if (!ch) return;
+    const wait = S.rt - p.readyRt;
+    addM({ N: Math.min(6, Math.floor(wait / PC().waitCostSec)) }, 'waited ' + wait.toFixed(0) + 's');
+    if (wait < PC().fastReplySec) addM({ L: 1 }, 'fast reply');
     addM(AR[ch.type].d, ch.type + (b.pivotal ? ' (pivotal)' : ''));
     if (S.lean[ch.type] != null) S.lean[ch.type] += b.pivotal ? 2 : 1;
     Object.assign(S.flags, ch.set || {});
@@ -509,27 +583,26 @@ function answer(beatId, idx) {
     msg.resolved = ch.type; S.pending = null;
     pushMsg({ chat: b.from, from: 'me', me: true, text: ch.text });
     if (ch.call) startCall();
-    let delay = ch.call ? 4500 : 1400;
-    ch.reply.forEach(r => { sendFrom(b.from, r, { kind: 'reply' }, delay); delay += 1300; });
+    const last = sendReplies(b.from, ch.reply, ch.type, ch, ch.call ? 4 : 0);
     if (b.pivotal && S.q && S.q.slot === 'evening' && !S.harutoDone) {
-      const dom = dominantType(); if (dom) { S.harutoDone = true; outbox.push({ due: performance.now() + delay + 3000, msg: { chat: 'Haruto', from: 'Haruto', text: GD.haruto[dom], kind: 'ambient' } }); }
+      const dom = dominantType(); if (dom) { S.harutoDone = true; sendFrom('Haruto', GD.haruto[dom], { kind: 'ambient' }, 4, false, last.due); }
     }
     unblockQueue();
   } else {
     const ch = b.choices[idx], mi = S.minors.findIndex(x => x.beat === beatId);
     const open = mi >= 0 ? S.minors[mi] : null; if (open) S.minors.splice(mi, 1);
-    if (b.from === 'Yui' && open && S.clock - open.openedAt < 120) addM({ L: 1, N: -1 }, 'quick minor reply');
+    if (b.from === 'Yui' && open && S.rt - open.openedAt < PC().fastReplySec) addM({ L: 1, N: -1 }, 'quick minor reply');
     if (ch.d) addM(ch.d, 'reply');
     Object.assign(S.flags, ch.set || {});
     msg.resolved = 'replied';
     pushMsg({ chat: b.from, from: 'me', me: true, text: ch.text });
-    let delay = 1300; (ch.reply || []).forEach(r => { sendFrom(b.from, r, { kind: 'reply' }, delay); delay += 1200; });
+    if (ch.reply && ch.reply.length) sendReplies(b.from, ch.reply, 'minor', ch);
   }
   save(); renderPhone(true); renderControls();
 }
 function startCall() {
-  callUntil = performance.now() + 4000; S.clock += 15 * 60;
-  showOverlay(`<h2>📞 Yui</h2><p class="muted">On a call…</p><p>She tells you about the vending machine, the library, and Rika's cooking. You tell her about Ren nearly running over a granny.</p><p class="muted">(+15 min)</p>`);
+  callUntil = performance.now() + 4000;
+  showOverlay(`<h2>📞 Yui</h2><p class="muted">On a call…</p><p>She tells you about the vending machine, the library, and Rika's cooking. You tell her about Ren nearly running over a granny.</p>`);
   setTimeout(hideOverlay, 3800);
 }
 
@@ -539,7 +612,7 @@ function crash() {
   world.msg = 'You came off the bike!';
   const cc = GD.crashCheck; S.flags.crashed_d1 = true;
   const b = { id: 'crash' + S.seq, from: cc.from, tier: 'minor', text: cc.text, choices: cc.choices };
-  day().shift.beats.push(Object.assign({}, b, { at: 9999 })); // registered so findBeat works
+  S.extraBeats[b.id] = b; // saved, so findBeat works after reload
   fireBeat(b);
 }
 
@@ -636,7 +709,7 @@ function tickShift(dt) {
     if (phoneUp && p.speed > 110 && Math.random() < dt * 0.06 * (S.flags.mount ? 0.5 : 1)) crash();
   }
   p.x = clamp(p.x, 10, MAP.W - 10); p.y = clamp(p.y, 10, MAP.H - 10);
-  S.clock += dt * C.gameSecondsPerRealSecond;
+  S.clock += dt * C.shiftGameSecPerReal;
 }
 function completeJob() {
   const w = world, j = w.jobs[w.cur];
@@ -682,6 +755,7 @@ function drawRoom(W, H) {
   ctx.fillText(lbl, W / 2, H * 0.84);
   ctx.font = '14px system-ui'; ctx.fillStyle = '#bbb'; ctx.fillText("Sora's room, Minase", W / 2, H * 0.84 + 22);
   if (S && S.slot !== 'title') ctx.fillText(`Trip fund ${yen(S.money)} / ${yen(C.tripTarget)}`, W / 2, H * 0.84 + 42);
+  if (S && (S.slot === 'morning' || S.slot === 'evening')) { ctx.fillStyle = '#ffb36b'; ctx.fillText(S.slot === 'morning' ? 'HayaEats shift starts at 13:00' : 'Bed at 23:30', W / 2, H * 0.84 + 62); }
 }
 function drawTown(W, H) {
   const w = world, p = w.p, cx = p.x - W / 2, cy = p.y - H / 2;
@@ -746,7 +820,7 @@ function renderPhone(force) {
   if (!S) return;
   const glance = S.slot === 'shift' && world && !world.done && !isSafe();
   phoneEl.className = !S.phone.open || paused || S.slot === 'title' ? 'closed' : glance ? 'glance' : '';
-  const sig = [S.phone.screen, S.msgs.length, glance, isSafe(), outbox.length, S.money, S.slot, JSON.stringify(badgeCounts()), Math.floor(S.clock / 60)].join('|');
+  const sig = [S.phone.screen, S.msgs.length, glance, isSafe(), S.outbox.length, typingChats().join(), S.money, S.slot, JSON.stringify(badgeCounts()), Math.floor(S.clock / 60)].join('|');
   if (!force && sig === lastPhoneSig) return; lastPhoneSig = sig;
   if (S.phone.open) clearUnread();
   const bc = badgeCounts();
@@ -754,13 +828,14 @@ function renderPhone(force) {
   if (phoneEl.className === 'closed') return;
   const sc = S.phone.screen; let body = '';
   const closeLbl = S.slot === 'shift' ? '✕ Map' : '✕ Room';
-  const bar = `<div class="pbar"><span>${fmtClock(S.clock)} · ${yen(S.money)}</span>${glance ? '<span class="ring">glance · stop to reply</span>' : ''}<button data-a="close">${closeLbl}</button></div>`;
+  const bar = `<div class="pbar"><span><b style="font-size:15px;color:#fff">${fmtClock(S.clock)}</b> · ${yen(S.money)}${nextUpHTML()}</span>${glance ? '<span class="ring">glance · stop to reply</span>' : ''}<button data-a="close">${closeLbl}</button></div>`;
   if (sc === 'home') {
     const ur = c => S.unread[c] || 0, lineUnread = Object.values(S.unread).reduce((a, b) => a + b, 0);
     body = `<div class="pscroll"><div class="apps">
       <div class="app" data-go="chats"><div class="ic">💬</div>LINE${lineUnread ? `<span class="badge">${lineUnread}</span>` : ''}</div>
       <div class="app" data-go="insta"><div class="ic">📸</div>Insta${S.feedUnread ? `<span class="badge">${S.feedUnread}</span>` : ''}</div>
       <div class="app" data-go="haya"><div class="ic">🛵</div>HayaEats</div></div>
+      ${typingChats().filter(c => c !== 'HayaEats').map(c => `<div class="tyhint" data-go="chat:${c}">💬 ${esc((CT[c] || { name: c }).name)} is typing<span class="dots"><i></i><i></i><i></i></span></div>`).join('')}
       <div style="padding:0 20px">${slotActionsHTML()}</div></div>`;
   } else if (sc === 'chats') {
     const chats = [...new Set(S.msgs.filter(m => m.channel !== 'insta' && !m.sys).map(m => m.chat))].reverse();
@@ -768,13 +843,13 @@ function renderPhone(force) {
       const last = S.msgs.filter(m => m.chat === c && m.channel !== 'insta').pop(), ct = CT[c] || { name: c, color: '#aaa' };
       const pend = S.msgs.some(m => m.chat === c && m.choices !== undefined) ; 
       const needs = S.msgs.some(m => m.chat === c && !m.me && (m.kind === 'key' || m.kind === 'minor') && !m.resolved);
-      return `<div class="chatrow" data-go="chat:${c}"><div class="av" style="background:${ct.color}">${esc(ct.name[0])}</div><div style="flex:1"><b>${esc(ct.name)}</b> ${needs ? '🔴' : ''}<div class="prev">${last.me ? 'You: ' : ''}${esc(last.media && !last.me ? '📷 Photo' : last.text)}</div></div>${S.unread[c] ? `<span class="badge" style="position:static">${S.unread[c]}</span>` : ''}</div>`;
+      return `<div class="chatrow" data-go="chat:${c}"><div class="av" style="background:${ct.color}">${esc(ct.name[0])}</div><div style="flex:1"><b>${esc(ct.name)}</b> ${needs ? '🔴' : ''}<div class="prev">${typingNow(c) ? '<span class="good">typing…</span>' : (last.me ? 'You: ' : '') + esc(last.media && !last.me ? '📷 Photo' : last.text)}</div></div>${S.unread[c] ? `<span class="badge" style="position:static">${S.unread[c]}</span>` : ''}</div>`;
     }).join('') || '<p class="muted" style="padding:16px">No messages yet.</p>') + '</div>';
   } else if (sc.startsWith('chat:')) {
     const c = sc.slice(5), ct = CT[c] || { name: c };
     const list = S.msgs.filter(m => m.chat === c && m.channel !== 'insta');
-    const typing = outbox.some(o => o.msg.chat === c);
-    body = top(ct.name, c === 'Yui' ? ct.status : '') + `<div class="pscroll" id="chatScroll">` + list.map(msgHTML).join('') + '</div>' + (typing ? `<div class="typing">${esc(ct.name)} is typing…</div>` : '') + choicesHTML(list);
+    const typing = typingNow(c);
+    body = top(ct.name, c === 'Yui' ? ct.status : '') + `<div class="pscroll" id="chatScroll">` + list.map(msgHTML).join('') + (typing ? '<div class="msg typingb"><i></i><i></i><i></i></div>' : '') + '</div>' + choicesHTML(list);
   } else if (sc === 'insta') {
     const posts = S.msgs.filter(m => m.channel === 'insta').slice().reverse();
     body = top('Insta') + `<div class="pscroll">` + (posts.map(m => `<div class="post"><div class="who" style="color:${(CT[m.from] || {}).color}">${esc((CT[m.from] || { name: m.from }).name)}</div>${m.media ? photoHTML(m.media) : ''}<div>${esc(m.text)}</div><div class="muted" style="font-size:11px">${fmtClock(m.t)}</div></div>`).join('') || '<p class="muted">Nothing new.</p>') + '</div>';
@@ -790,6 +865,18 @@ function renderPhone(force) {
   phoneEl.innerHTML = bar + `<div class="pbody">${body}</div>`;
   const cs = $('chatScroll'); if (cs) cs.scrollTop = cs.scrollHeight;
 }
+function nextUpHTML() {
+  const left = (hhmm) => { const d = Math.max(0, hm(hhmm) - S.clock); return d < 60 ? 'now' : `in ${Math.floor(d / 3600) ? Math.floor(d / 3600) + 'h ' : ''}${Math.floor(d % 3600 / 60)}m`; };
+  if (S.slot === 'morning') return `<br><span style="font-size:11px">🛵 shift 13:00 · ${left('13:00')}</span>`;
+  if (S.slot === 'evening') return `<br><span style="font-size:11px">😴 bed 23:30 · ${left('23:30')}</span>`;
+  return '';
+}
+function renderTypingPill() {
+  const el = $('typingPill'); if (!el || !S) return;
+  const t = S.phone.open && !phoneEl.classList.contains('glance') ? [] : typingChats().filter(c => c !== 'HayaEats');
+  const html = t.length ? `${esc((CT[t[0]] || { name: t[0] }).name)} is typing<span class="dots"><i></i><i></i><i></i></span>` : '';
+  if (el.dataset.h !== html) { el.dataset.h = html; el.innerHTML = html; el.style.display = html ? 'block' : 'none'; }
+}
 function top(title, sub) { return `<div class="ptop"><button class="back" data-go="${S.phone.screen.startsWith('chat:') ? 'chats' : 'home'}">‹</button><div class="title">${esc(title)}${sub ? `<div class="sub">${esc(sub)}</div>` : ''}</div></div>`; }
 function photoHTML(md) { return `<div class="photo"><b>📷 ${esc(md.id)}</b>${esc(md.caption || '')}</div>`; }
 function msgHTML(m) {
@@ -802,12 +889,12 @@ function choicesHTML(list) {
   const b = findBeat(m.beat); if (!b) return '';
   const safe = isSafe(), chs = b.tier === 'key' ? choicesFor(b) : b.choices;
   let lbl = b.tier === 'key' ? (b.pivotal ? '🔴 Big moment' : '🔴 She\'s waiting for an answer') : '';
-  if (b.tier === 'minor') { const mi = S.minors.find(x => x.beat === b.id); if (mi && mi.deadline) lbl = `<span class="ring">🟡 reply window ${Math.max(0, Math.ceil((mi.deadline - S.clock) / 60))} min</span>`; }
+  if (b.tier === 'minor') { const mi = S.minors.find(x => x.beat === b.id); if (mi && mi.deadline) lbl = `<span class="ring">🟡 reply soon · ${Math.max(0, Math.ceil(mi.deadline - S.rt))}s</span>`; }
   return `<div class="choices ${b.pivotal ? 'pivotal' : ''}"><div class="lbl">${lbl}</div>` + chs.map((c, i) =>
     `<button data-ans="${b.id}" data-i="${i}" ${safe ? '' : 'disabled'}>${safe ? esc(c.text) : 'Pull over to reply 🚲'}</button>`).join('') + '</div>';
 }
 function slotActionsHTML() {
-  if (S.slot === 'morning') return `<button class="primary" data-a="work" style="width:100%" ${canLeaveMorning() ? '' : 'disabled'}>Go to work 🛵</button><p class="muted" style="font-size:12px">${canLeaveMorning() ? (S.pending ? 'Yui is still waiting on an answer. You can reply on a stop during the shift.' : '') : 'Your morning texts are still coming in…'}</p>`;
+  if (S.slot === 'morning') return `<button class="primary" data-a="work" style="width:100%" ${canLeaveMorning() ? '' : 'disabled'}>${slotScriptDone() ? "It's 13:00, start your shift 🛵" : 'Go to work 🛵'}</button><p class="muted" style="font-size:12px">${canLeaveMorning() ? (S.pending ? 'Yui is still waiting on an answer. You can reply on a stop during the shift.' : '') : 'Your morning texts are still coming in…'}</p>`;
   if (S.slot === 'evening') return `<button class="primary" data-a="sleep" style="width:100%" ${canSleep() ? '' : 'disabled'}>Sleep 😴</button>
     <p class="muted" style="font-size:12px">${canSleep() ? '' : (S.pending || S.keyQueue.length) ? "Yui's waiting for an answer." : 'Evening texts are still coming in…'}</p>
     ${S.lateDone ? '' : '<button data-a="late" style="width:100%">Take a late shift (pay ×0.6, Yui notices)</button>'}`;
@@ -817,7 +904,7 @@ function canLeaveMorning() {
   if (S.slot !== 'morning') return false; if (slotScriptDone()) return true;
   const q = S.q, beats = day().morning.beats; return q.blocked && !beats.slice(q.idx).some(b => b.tier === 'key');
 }
-function canSleep() { return S.slot === 'evening' && slotScriptDone() && !S.pending && !S.keyQueue.length && !outbox.length; }
+function canSleep() { return S.slot === 'evening' && slotScriptDone() && !S.pending && !S.keyQueue.length && !S.outbox.length; }
 
 phoneEl.addEventListener('click', e => {
   const t = e.target.closest('[data-go],[data-a],[data-ans],[data-buy]'); if (!t) return;
@@ -847,7 +934,7 @@ function toMorning() {
   openPhone('home'); renderControls(); save();
 }
 function toShiftSelect(late) {
-  if (!late) leaveSlot();
+  if (!late) leaveSlot(); else { S.eveClock = S.clock; S.eveningQ = S.q; }
   S.slot = late ? 'evening' : 'shift_select';
   const ds = C.difficulties;
   showOverlay(`<h2>🛵 HayaEats ${late ? 'late shift' : 'afternoon shift'}</h2>
@@ -861,7 +948,7 @@ function toShiftSelect(late) {
 function toEvening(fromLate) {
   hideOverlay(); S.slot = 'evening';
   if (!fromLate) { S.clock = Math.max(S.clock, hm(day().evening.startClock)); startQueue('evening'); }
-  else { S.clock = Math.max(S.clock, hm('22:00')); if (S.eveningQ) S.q = S.eveningQ; }
+  else { S.clock = S.eveClock ?? S.clock; if (S.eveningQ) { S.q = S.eveningQ; S.q.segFrom = S.clock; S.q.segReal = 0; } }
   openPhone('home'); renderControls(); save();
 }
 function sleep() {
@@ -890,7 +977,7 @@ function showSummary() {
     <p class="muted" style="font-size:13px">Lean: Naive ${lean.Naive} · Guilt ${lean.Guilt} · Encouraged ${lean.Encouraged} · Desperate ${lean.Desperate} · Protective 🛡️ ${S.lean.protective} (no route weight)</p>
     <p class="muted">Day 2 isn't built yet.</p>
     <div class="row"><button class="primary" id="again">Play Day 1 again</button></div>`);
-  $('again').onclick = () => { localStorage.removeItem(SAVE_KEY); S = newState(); outbox = []; world = null; hideOverlay(); toMorning(); };
+  $('again').onclick = () => { localStorage.removeItem(SAVE_KEY); S = newState(); world = null; hideOverlay(); toMorning(); };
 }
 function showOverlay(html) { ocard.innerHTML = html; ov.style.display = 'flex'; }
 function hideOverlay() { ov.style.display = 'none'; }
@@ -940,24 +1027,50 @@ window.addEventListener('keyup', e => { keys[e.key.length === 1 ? e.key.toLowerC
 
 /* ---------- debug ---------- */
 let debugOn = false;
-function toggleDebug() { debugOn = !debugOn; $('debug').style.display = debugOn ? 'block' : 'none'; renderDebug(); }
-$('debugBtn').onclick = toggleDebug;
+const dbgEl = $('debug'), dbgBtn = $('debugBtn');
+dbgEl.innerHTML = '<button id="dbgClose" data-dbg="close" aria-label="Close debug">✕ Close</button><div id="dbgBody"></div>';
+function setDebug(on) { debugOn = on; dbgEl.style.display = on ? 'block' : 'none'; renderDebug(); }
+function toggleDebug() { setDebug(!debugOn); }
+// 🐞 opens on long-press (0.5 s) so it's never hit by accident; a quick tap closes it if it's open.
+let lpTimer = null, lpFired = false;
+dbgBtn.addEventListener('pointerdown', e => { e.preventDefault(); e.stopPropagation(); lpFired = false;
+  if (debugOn) { setDebug(false); lpFired = true; return; }
+  lpTimer = setTimeout(() => { lpFired = true; setDebug(true); }, 500); });
+['pointerup', 'pointerleave', 'pointercancel'].forEach(ev => dbgBtn.addEventListener(ev, () => clearTimeout(lpTimer)));
+dbgBtn.addEventListener('contextmenu', e => e.preventDefault());
+// tap outside the panel closes it (and the tap is swallowed so it doesn't hit the game)
+document.addEventListener('pointerdown', e => {
+  if (!debugOn || dbgEl.contains(e.target) || dbgBtn.contains(e.target)) return;
+  e.preventDefault(); e.stopPropagation(); setDebug(false);
+  const swallow = ev => { ev.stopPropagation(); ev.preventDefault(); };
+  document.addEventListener('click', swallow, { capture: true, once: true }); setTimeout(() => document.removeEventListener('click', swallow, true), 400);
+}, true);
+// panel actions on pointerdown via delegation (the body re-renders, so per-button handlers get lost on iOS)
+dbgEl.addEventListener('pointerdown', e => {
+  const t = e.target.closest('[data-dbg]'); if (!t) return; e.preventDefault();
+  const a = t.dataset.dbg;
+  if (a === 'close') setDebug(false);
+  else if (a === 'skip') skipAhead();
+  else if (a === 'reset') { localStorage.removeItem(SAVE_KEY); location.reload(); }
+});
+function skipAhead() { // jump to the next thing: land anything being typed and end the current gap
+  S.outbox.forEach(e => { e.due = S.rt; e.segs = []; }); if (S.q) S.q.segReal = 1e6; landOutbox();
+}
 function renderDebug() {
   if (!debugOn || !S) return;
   const m = S.meters, bar = (k, c) => `${k} ${m[k]} <span style="color:#888">(start ${S.startMeters[k]}, ${m[k] - S.startMeters[k] >= 0 ? '+' : ''}${m[k] - S.startMeters[k]})</span><div class="bar"><div style="width:${m[k]}%;background:${c}"></div></div>`;
   const p = S.pending;
-  $('debug').innerHTML = `<b>DEBUG</b> · ${S.slot} · ${fmtClock(S.clock)} · safe:${isSafe()}<br>
+  $('dbgBody').innerHTML = `<b>DEBUG</b> · ${S.slot} · ${fmtClock(S.clock)} · rt ${S.rt.toFixed(0)}s · safe:${isSafe()}<br>
     ${bar('L', '#f7a1c4')}${bar('I', '#a7c7ff')}${bar('E', '#ffb36b')}${bar('N', '#999')}
     route_now: <b>${S.route}</b> · rules say: <b>${evalRoute()}</b> · desp_cause: ${despCause()}<br>
     lean → Naive ${S.lean.wholesome} · Guilt ${S.lean.forgiving} · Enc ${S.lean.encouraging} · Desp ${S.lean.cold + S.lean.jealous} (cold ${S.lean.cold}/jealous ${S.lean.jealous}) · 🛡️ ${S.lean.protective} (no weight)<br>
     money ${yen(S.money)} · earned ${yen(S.earned)} · spent ${yen(S.spent)}<br>
-    pending key: ${p ? `${p.beat} ${p.fired ? 'shown' : 'waiting for a stop'} · wait ${((S.clock - p.readyAt) / 60).toFixed(1)}m · steps ${p.steps}` : '—'}<br>
-    queued keys: ${S.keyQueue.join(', ') || '—'} · open minors: ${S.minors.map(x => x.beat + (x.deadline ? '(' + Math.ceil((x.deadline - S.clock) / 60) + 'm)' : '')).join(', ') || '—'}<br>
+    pending key: ${p ? `${p.beat} ${p.fired ? 'shown' : 'waiting for a stop'} · wait ${(S.rt - p.readyRt).toFixed(0)}s · steps ${p.steps}` : '—'}<br>
+    typing: ${typingChats().join(', ') || '—'} · composing ${S.outbox.length}<br>
+    queued keys: ${S.keyQueue.join(', ') || '—'} · open minors: ${S.minors.map(x => x.beat + (x.deadline ? '(' + Math.ceil(x.deadline - S.rt) + 's)' : '')).join(', ') || '—'}<br>
     flags: ${esc(JSON.stringify(S.flags))}<br>
-    <button id="dbgSkip">+10 game min</button> <button id="dbgReset">Reset save</button>
-    <div style="margin-top:6px;color:#aaa">${S.log.slice(-12).reverse().map(esc).join('<br>')}</div>`;
-  $('dbgSkip').onclick = () => { S.clock += 600; if (S.q && S.q.nextAt) S.q.nextAt -= 0; };
-  $('dbgReset').onclick = () => { localStorage.removeItem(SAVE_KEY); location.reload(); };
+    <div class="row" style="margin:8px 0"><button data-dbg="skip">⏭ Skip wait</button><button data-dbg="reset">Reset save</button></div>
+    <div style="color:#aaa">${S.log.slice(-12).reverse().map(esc).join('<br>')}</div>`;
 }
 
 /* ---------- title ---------- */
@@ -966,7 +1079,7 @@ function title() {
   const saved = load();
   showOverlay(`<h2>Last Train Home</h2><p class="muted">Day 1 · Move-in. Yui's moving to Tokyo for uni. You're staying in Minase, doing HayaEats deliveries to save ${yen(C.tripTarget)} so you can visit her.</p>
     <p class="muted" style="font-size:13px">Personal prototype. Placeholder art. Progress saves on this device.</p>
-    <p class="muted" style="font-size:11px;opacity:.7" id="buildStamp">2026-10-16 07:14 BST · day1 web</p>
+    <p class="muted" style="font-size:11px;opacity:.7" id="buildStamp">2026-10-16 07:31 BST · day1 web</p>
     <div class="diff">${saved && saved.slot !== 'title' ? '<button class="primary" id="cont">Continue</button>' : ''}<button ${saved && saved.slot !== 'title' ? '' : 'class="primary"'} id="newg">New game</button></div>`);
   if ($('cont')) $('cont').onclick = () => { S = saved; resume(); };
   $('newg').onclick = () => { localStorage.removeItem(SAVE_KEY); S = newState(); hideOverlay(); toMorning(); };
@@ -982,21 +1095,20 @@ function resume() {
 function frame(t) {
   const dt = Math.min(0.05, (t - lastT) / 1000); lastT = t;
   if (S && !paused && ov.style.display !== 'flex') {
-    if (S.slot === 'morning' || S.slot === 'evening') S.clock += dt * C.gameSecondsPerRealSecond;
-    if (S.slot === 'shift') tickShift(dt);
-    if (S.slot === 'morning' || S.slot === 'evening' || S.slot === 'shift') { tickQueue(); tickTimers(); }
+    if (S.slot === 'morning' || S.slot === 'evening' || S.slot === 'shift') {
+      S.rt += dt; if (S.slot === 'shift') tickShift(dt);
+      tickQueue(dt); tickTimers(); landOutbox();
+    }
   }
   if (S && S.slot === 'evening' && S.q && S.q.slot === 'evening') S.eveningQ = S.q;
-  const now = performance.now();
-  if (outbox.length && outbox[0]) { const due = outbox.filter(o => o.due <= now); if (due.length) { outbox = outbox.filter(o => o.due > now); due.forEach(o => pushMsg(o.msg)); } }
   if (world) updateActBtn();
   draw();
-  uiTimer += dt; if (uiTimer > 0.25) { uiTimer = 0; renderPhone(); renderDebug(); }
+  renderTypingPill(); uiTimer += dt; if (uiTimer > 0.25) { uiTimer = 0; renderPhone(); renderDebug(); }
   saveTimer += dt; if (saveTimer > 3) { saveTimer = 0; if (S && S.slot !== 'title') save(); }
   requestAnimationFrame(frame);
 }
 window.addEventListener('resize', resize);
-window.__game = { get S() { return S; }, get world() { return world; }, answer, action, startShift, sleep, toShiftSelect, keys, joy };
+window.__game = { skipAhead, get S() { return S; }, get world() { return world; }, answer, action, startShift, sleep, toShiftSelect, keys, joy };
 resize(); title(); requestAnimationFrame(frame);
 })();
 
