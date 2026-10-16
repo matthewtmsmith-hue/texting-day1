@@ -1,0 +1,1005 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Last Train Home · Day 1</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="robots" content="noindex,nofollow">
+<meta name="tg-build" content="2026-10-16 07:14 BST · day1 web">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<link rel="icon" href="data:,">
+<meta name="theme-color" content="#0d0f14">
+<style>
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { margin: 0; height: 100%; overflow: hidden; overscroll-behavior: none; touch-action: none; background: #0b0c10; }
+  body { color: #e8e8ee; font: 16px/1.35 system-ui, "Segoe UI", Roboto, sans-serif; -webkit-user-select: none; user-select: none; -webkit-text-size-adjust: 100%; }
+  #app { position: relative; margin: 0 auto; width: 100%; max-width: 520px; height: 100vh; height: 100dvh; overflow: hidden; background: #14161c; }
+  #stage { position: absolute; inset: 0; }
+  #stage.buzz1 { animation: shake .15s 1; } #stage.buzz2 { animation: shake .15s 2; } #stage.buzz3 { animation: shake .4s 2; }
+  @keyframes shake { 0%,100% { transform: translate(0,0);} 25% { transform: translate(-5px,1px);} 75% { transform: translate(5px,-1px);} }
+  canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; background: #2b3a2b; touch-action: none; }
+  #banner { position: absolute; top: calc(env(safe-area-inset-top) + 92px); left: 8px; right: 8px; background: rgba(20,20,28,.96); border: 1px solid #444; border-radius: 14px; padding: 10px 14px; display: none; z-index: 30; }
+  #banner b { color: #f7a1c4; }
+  #controls { position: absolute; left: 0; right: 0; bottom: calc(env(safe-area-inset-bottom) + 10px); display: flex; gap: 10px; z-index: 6; justify-content: center; flex-wrap: wrap; padding: 0 10px; }
+  button { background: #2e3240; color: #eee; border: 1px solid #4a5068; border-radius: 12px; padding: 12px 16px; min-height: 48px; cursor: pointer; font: inherit; touch-action: manipulation; }
+  button:active:not(:disabled) { background: #444b63; }
+  button:disabled { opacity: .45; }
+  button.primary { background: #ff7a45; border-color: #ff9a6b; color: #111; font-weight: 600; }
+  #overlay { position: absolute; inset: 0; background: rgba(10,10,16,.88); display: none; align-items: center; justify-content: center; z-index: 25; }
+  #overlay .card { background: #1f2230; border: 1px solid #3a3f55; border-radius: 16px; padding: 18px; width: 94%; max-height: 92%; overflow: auto; touch-action: pan-y; -webkit-overflow-scrolling: touch; }
+  #overlay h2 { margin: 0 0 10px; } .muted { color: #9aa0b4; } .good { color: #8fe08f; } .bad { color: #ff8a8a; }
+  .diff { display: flex; flex-direction: column; gap: 10px; margin: 14px 0; } .diff button { text-align: left; }
+  .row { display: flex; gap: 10px; flex-wrap: wrap; } .row button { flex: 1; }
+  table.sum { border-collapse: collapse; width: 100%; margin: 8px 0; font-size: 14px; } table.sum td { padding: 4px 6px; border-bottom: 1px solid #2c3042; }
+  /* touch controls */
+  #pad { position: absolute; left: 14px; bottom: calc(env(safe-area-inset-bottom) + 16px); width: 150px; height: 150px; border-radius: 50%; background: rgba(255,255,255,.08); border: 2px solid rgba(255,255,255,.18); z-index: 7; display: none; touch-action: none; }
+  #knob { position: absolute; left: 50%; top: 50%; width: 62px; height: 62px; margin: -31px 0 0 -31px; border-radius: 50%; background: rgba(255,255,255,.35); }
+  #actBtn { position: absolute; right: 14px; bottom: calc(env(safe-area-inset-bottom) + 30px); width: 110px; height: 110px; border-radius: 50%; z-index: 7; display: none; font-weight: 700; font-size: 15px; background: #c0392b; border-color: #e66; }
+  #phoneBtn { position: absolute; right: 14px; bottom: calc(env(safe-area-inset-bottom) + 152px); width: 64px; height: 64px; border-radius: 50%; z-index: 7; font-size: 26px; padding: 0; display: none; }
+  #phoneBtn .badge { top: -2px; right: -2px; }
+  /* phone */
+  #phone { position: absolute; inset: 0; z-index: 20; background: #0d0f14; display: flex; flex-direction: column; overflow: hidden; padding-top: env(safe-area-inset-top); }
+  #phone.closed { display: none; }
+  #phone.glance { bottom: 52%; opacity: .93; border-bottom: 3px solid #333a4a; }
+  .pbar { padding: 8px 14px; display: flex; justify-content: space-between; align-items: center; font-size: 13px; color: #aaa; gap: 8px; }
+  .pbar button { min-height: 38px; padding: 6px 12px; }
+  .pbody { flex: 1; display: flex; flex-direction: column; min-height: 0; }
+  .ptop { padding: 6px 10px; background: #161a24; display: flex; align-items: center; gap: 8px; border-bottom: 1px solid #222; }
+  .ptop .title { font-weight: 600; flex: 1; } .ptop .sub { font-size: 12px; color: #9aa; }
+  .pscroll { flex: 1; overflow-y: auto; padding: 10px; display: flex; flex-direction: column; gap: 7px; touch-action: pan-y; -webkit-overflow-scrolling: touch; overscroll-behavior: contain; }
+  .apps { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; padding: 20px; }
+  .app { background: #1d2230; border-radius: 18px; padding: 16px 6px; text-align: center; position: relative; min-height: 88px; }
+  .app .ic { font-size: 32px; } .badge { position: absolute; top: -4px; right: -4px; background: #e33; border-radius: 10px; padding: 0 7px; font-size: 12px; color: #fff; }
+  .badge.y { background: #d9a300; color: #111; } .badge.w { background: #ccc; color: #111; }
+  .chatrow { display: flex; gap: 12px; padding: 12px; border-bottom: 1px solid #1d2230; align-items: center; min-height: 64px; }
+  .av { width: 42px; height: 42px; border-radius: 50%; flex: 0 0 42px; display: flex; align-items: center; justify-content: center; color: #111; font-weight: 700; }
+  .chatrow .prev { font-size: 13px; color: #9aa; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 64vw; }
+  .msg { max-width: 84%; padding: 8px 12px; border-radius: 18px; background: #262b3a; align-self: flex-start; word-wrap: break-word; }
+  .msg.me { background: #06c755; color: #04210f; align-self: flex-end; }
+  .msg .t { font-size: 11px; color: #8a90a3; margin-top: 2px; } .msg.me .t { color: #0b4a22; text-align: right; }
+  .msg.sys { align-self: center; background: none; color: #8a90a3; font-size: 12px; }
+  .photo { width: 230px; max-width: 100%; height: 160px; border-radius: 12px; display: flex; flex-direction: column; justify-content: flex-end; padding: 8px; font-size: 12px; color: #111; margin-bottom: 4px; background: linear-gradient(135deg, #f7c1d9, #a7c7ff); }
+  .choices { display: flex; flex-direction: column; gap: 8px; padding: 10px; padding-bottom: calc(env(safe-area-inset-bottom) + 10px); border-top: 1px solid #222; background: #121520; max-height: 55%; overflow-y: auto; touch-action: pan-y; }
+  .choices.pivotal { border-top: 3px solid #f7a1c4; animation: hb 1.2s infinite; }
+  @keyframes hb { 0%,100% { box-shadow: inset 0 0 0 rgba(247,161,196,0);} 15% { box-shadow: inset 0 0 22px rgba(247,161,196,.35);} }
+  .choices button { text-align: left; border-radius: 18px; min-height: 52px; }
+  .choices .lbl { font-size: 12px; color: #9aa; } .ring { color: #d9a300; }
+  .typing { font-size: 13px; color: #9aa; padding: 0 14px 6px; font-style: italic; }
+  .post { background: #161a24; border-radius: 12px; padding: 10px; }
+  .post .who { font-weight: 600; margin-bottom: 6px; }
+  .savebar { height: 14px; background: #262b3a; border-radius: 7px; overflow: hidden; margin: 6px 0 12px; } .savebar div { height: 100%; background: #ff7a45; }
+  .shopitem { display: flex; justify-content: space-between; align-items: center; gap: 8px; padding: 10px 0; border-bottom: 1px solid #222; }
+  #debug { position: absolute; left: 8px; right: 8px; top: calc(env(safe-area-inset-top) + 56px); max-height: 70%; overflow: auto; background: rgba(0,0,0,.92); border: 1px solid #555; border-radius: 12px; padding: 10px; font: 12px/1.45 ui-monospace, Consolas, monospace; z-index: 40; display: none; touch-action: pan-y; }
+  #debug .bar { height: 8px; background: #333; border-radius: 4px; margin: 2px 0 6px; } #debug .bar div { height: 100%; border-radius: 4px; }
+  #debugBtn { position: absolute; left: 50%; transform: translateX(-50%); top: calc(env(safe-area-inset-top) + 4px); z-index: 41; opacity: .55; min-height: 40px; padding: 6px 10px; font-size: 13px; }
+</style>
+
+<style id="ios-fs-hide">
+@supports (-webkit-touch-callout: none) {
+  button[data-fullscreen], #fullscreenBtn, .fullscreen-btn { display: none !important; }
+}
+</style>
+</head>
+<body>
+<div id="app">
+  <div id="stage">
+    <canvas id="cv"></canvas>
+    <div id="controls"></div>
+    <div id="pad"><div id="knob"></div></div>
+    <button id="actBtn">STOP</button>
+    <button id="phoneBtn" title="Phone (P)">📱</button>
+  </div>
+  <div id="phone" class="closed"></div>
+  <div id="banner"></div>
+  <div id="overlay"><div class="card" id="ocard"></div></div>
+  <div id="debug"></div>
+  <button id="debugBtn" title="Debug panel (` or F2)">🐞</button>
+</div>
+<script>
+// Day 1 content for "Last Train Home" prototype.
+// Engine reads window.GAME_DATA (config, shared tables) and window.DAYS[1].
+// Beat fields:
+//   id, from, tier: key|minor|ambient, text, media {id, kind:'photo'|'clip', caption}
+//   delay: in-game minutes after the previous beat fired (or after the previous key was answered)
+//   at: (shift only) real seconds into the shift
+//   choices: [{text, type, reply:[lines], set:{flag:value}}]
+//   pivotal: true, pushback: {cold:{...}, jealous:{...}} (picks the push-back that matches the player's tone)
+//   cond: {minN, maxL, any:true}  optional gate (route-only lines)
+//   channel: 'line' (default) or 'insta'
+window.GAME_DATA = {
+  config: {
+    gameSecondsPerRealSecond: 20,     // 1 real second = 20 in-game seconds
+    minorWindowMin: 10,
+    shiftSeconds: 120,
+    startMoney: 3000,
+    tripTarget: 50000,
+    startMeters: { L: 60, I: 70, E: 0, N: 0 },
+    impatience: [ {min: 3, text: "??"}, {min: 8, text: "hello"}, {min: 15, text: "wow ok"},
+                  {min: 25, text: "fine I'll just go help Rika with dinner then 🙄"} ],
+    bikeMaxSpeed: 180, walkSpeed: 75,
+    difficulties: {
+      easy:   { label: "Easy",   desc: "One neighbourhood", par: 22, maxPay: 1300, leg: [1000, 1500] },
+      medium: { label: "Medium", desc: "Across town",       par: 26, maxPay: 2400, leg: [2000, 2700] },
+      hard:   { label: "Hard",   desc: "Edge to edge, hills, station rush", par: 32, maxPay: 3800, leg: [3300, 4300] }
+    },
+    lateShift: { mult: 0.6, N: 3 }
+  },
+  // §3.2 archetype deltas
+  archetypes: {
+    wholesome:   { d: {L: 3, I: 3},              route: "Naive",      icon: "🌸" },
+    forgiving:   { d: {L: 3, I: -4},             route: "Guilt",      icon: "🫂" },
+    encouraging: { d: {L: 1, I: -4, E: 6},       route: "Encouraged", icon: "😏" },
+    cold:        { d: {L: -3, N: 2},             route: "Desperate",  icon: "" },
+    jealous:     { d: {L: -5, I: 1, E: -3, N: 2},route: "Desperate",  icon: "‼️" },
+    protective:  { d: {L: 1},                    route: null,         icon: "🛡️" },
+    call_now:    { d: {L: 3, N: -3},             route: null,         icon: "📞" },
+    call_later:  { d: {L: -2, N: 6},             route: null,         icon: "" }
+  },
+  shop: [
+    { id: "snack", name: "Snack box", price: 1300, d: {L: 2}, desc: "something small to say hi" },
+    { id: "flowers", name: "💐 Flowers", price: 2500, d: {L: 3}, desc: "something sweet" },
+    { id: "hoodie", name: "Hoodie", price: 4000, d: {L: 3}, desc: "so she has something of yours" },
+    { id: "cute", name: "🎀 Something cute", price: 6000, d: {L: 2, I: -3, E: 5}, desc: "…for her nights out" },
+    { id: "condoms", name: "Condoms and lube", price: 3000, d: {E: 10}, desc: "", minE: 25 },
+    { id: "mount", name: "📱 Phone mount (for you)", price: 4000, d: {}, desc: "halves the wobble when you read while riding", self: true }
+  ],
+  reflections: {
+    Naive: "She sounded happy. That's good… right?",
+    Guilt: "She keeps apologising for things she won't explain.",
+    Desperate_absent: "Didn't really talk to her today.",
+    Desperate_smothered: "Maybe I pushed too hard.",
+    Encouraged: "Can't stop thinking about what she'll tell me tomorrow."
+  },
+  haruto: {
+    wholesome: "you two are disgustingly cute",
+    forgiving: "dude you believe everything she says",
+    encouraging: "bro WHAT 😭",
+    cold: "when did you last actually talk to her",
+    jealous: "ease up man, you're scaring her off"
+  },
+  missedMinor: { home: "guess you're busy 🙄", shift: "at work? ok 😘" },
+  crashCheck: { from: "Yui", text: "you ok?? HayaEats says your order got delayed",
+    choices: [ { text: "came off the bike lol, I'm fine", type: "minor", d: {L: 2}, reply: ["omg were you reading my texts while riding 😭 stop"] },
+               { text: "yeah fine", type: "minor", reply: ["ok be careful!!"] } ] },
+  contacts: {
+    Yui:    { name: "Yui 🌸", color: "#f7a1c4", status: "🍙 first day in tokyo!!" },
+    Haruto: { name: "Haruto", color: "#7fb3ff" },
+    Mom:    { name: "Mom", color: "#ffd27f" },
+    HayaEats: { name: "HayaEats", color: "#ff7a45" },
+    Rika:   { name: "rika.mzn", color: "#c59bff" },
+    Daichi: { name: "daichi_m", color: "#8fd18f" },
+    Kenji:  { name: "Kenji", color: "#9aa5b1" }
+  }
+};
+
+window.DAYS = window.DAYS || {};
+window.DAYS[1] = {
+  title: "Day 1 · Move-in",
+  morning: { startClock: "07:10", beats: [
+    { id: "m01", from: "Mom", tier: "minor", delay: 1,
+      text: "morning love. Yui gets to Tokyo today doesn't she? tell her good luck from me",
+      choices: [ { text: "yeah she's on the shinkansen now, I'll tell her", reply: ["good. and eat something before work"] },
+                 { text: "will do", reply: ["👍"] } ] },
+    { id: "m02", from: "Yui", tier: "ambient", delay: 3, text: "omg I'm actually on the shinkansen 😭✨" },
+    { id: "m03", from: "Yui", tier: "minor", delay: 2,
+      text: "the lady next to me has been eating ekiben since Nagano lol",
+      choices: [ { text: "lol what did she get", reply: ["some kind of eel thing?? it smells so good I'm suffering 😭"] },
+                 { text: "jealous, I've only had toast", reply: ["toast 😭 please eat properly today"] } ] },
+    { id: "m04", from: "Haruto", tier: "minor", delay: 4,
+      text: "you working today or are you just going to stare at your phone waiting for Yui all day",
+      choices: [ { text: "working, I've got the afternoon shift", reply: ["respect. ¥50k isn't going to earn itself"] },
+                 { text: "both probably lol", reply: ["dude..."] } ] },
+    { id: "m05", from: "Yui", tier: "ambient", delay: 6, text: "I'm here!! Tokyo is SO big 🥺",
+      media: { id: "all_P01", kind: "photo", caption: "Move-in selfie with boxes" } },
+    { id: "m06", from: "Yui", tier: "key", pivotal: true, delay: 1,
+      text: "just got to the flat. Rika's bf came over to help with my boxes, isn't that sweet",
+      choices: [
+        { type: "wholesome", text: "you made it!! I'm so proud of you. text me once you're settled ok? 🌸", reply: ["I will!! I miss you already 🥹"] },
+        { type: "forgiving", text: "aww that's nice of him. I trust you to look after yourself out there 🫂", reply: ["thank you for not being all worried about it lol 🥹"] },
+        { type: "encouraging", text: "go enjoy it, don't worry about texting me loads today 😏", reply: ["wait really? ok lol I'll tell you everything later 😳"] },
+        { type: "protective", text: "who's the guy? just be a bit careful with people you've only just met ok 🛡️", reply: ["aww you worry too much 🥹 he's Rika's bf, he's just being nice!"] }
+      ],
+      pushback: { cold: { type: "cold", text: "nice. busy rn", reply: ["oh ok… talk later then"] },
+                  jealous: { type: "jealous", text: "why is some guy carrying your stuff‼️", reply: ["because he's Rika's boyfriend?? he's just helping"] } } },
+    { id: "m07", from: "Yui", tier: "key", delay: 4,
+      text: "Rika's bf is carrying EVERYTHING lol. his name's Kenji, he's 24 and he's doing a master's at Seiran",
+      media: { id: "all_P02", kind: "photo", caption: "Kenji carrying boxes up the stairs" },
+      choices: [
+        { type: "wholesome", text: "that's really nice of him. make sure you carry something too lol 🌸", reply: ["I'm carrying the pillows, that counts 😤"] },
+        { type: "encouraging", text: "lol let him do all of it, free labour 😏", reply: ["lol that's literally what Rika said 😂"] },
+        { type: "protective", text: "he's keen. just keep an eye on him, you've known him for about ten minutes 🛡️", reply: ["he's Rika's boyfriend silly, apparently he's basically always here lol"] }
+      ] },
+    { id: "m08", from: "Mom", tier: "minor", delay: 3, text: "did you eat breakfast? and please don't ride like a maniac today",
+      choices: [ { text: "I had toast, I'll be careful", reply: ["toast isn't breakfast. be careful x"] },
+                 { text: "yes mom", reply: ["don't 'yes mom' me 😂"] } ] },
+    { id: "m09", from: "Yui", tier: "minor", delay: 5, text: "ok the room is tiny but the window looks right at a vending machine lol",
+      choices: [ { text: "a vending machine view, very Tokyo", reply: ["it glows at night, it's going to be my nightlight 😂"] },
+                 { text: "send me a pic once it's set up", reply: ["I will when it doesn't look like a warehouse lol"] } ] },
+    { id: "m10", from: "Yui", tier: "ambient", delay: 4, text: "Rika is so nice btw, she's already made me tea" },
+    { id: "m11", from: "Yui", tier: "key", delay: 3, text: "do you think I'll actually make friends here 🥺",
+      choices: [
+        { type: "wholesome", text: "you will, people are going to love you. just be yourself 🌸", reply: ["you always know what to say 🥹"] },
+        { type: "forgiving", text: "of course you will, and don't feel bad if you're out a lot, I get it 🫂", reply: ["you're the best, seriously"] },
+        { type: "cold", text: "you'll be fine", reply: ["…yeah ok"] }
+      ] },
+    { id: "m12", from: "Haruto", tier: "ambient", delay: 4, text: "shift's at 1 right? Ren was bragging that he got all the station orders yesterday" },
+    { id: "m13", from: "Yui", tier: "ambient", delay: 3, text: "we're going to the konbini for snacks, I'll text you in a bit 💕" }
+  ] },
+  shift: { startClock: "13:00", beats: [
+    { id: "s01", from: "Yui", tier: "minor", at: 6, text: "unpacking is the worst thing ever invented 😩",
+      choices: [ { text: "lol you've got about three boxes", reply: ["FIVE boxes thank you"] },
+                 { text: "want me to come and do it for you", reply: ["yes please, get the next shinkansen 🥺"] } ] },
+    { id: "s02", from: "HayaEats", tier: "ambient", at: 14, text: "Orders picked up. Ride safe! 🛵" },
+    { id: "s03", from: "Yui", tier: "ambient", at: 24, text: "room tour!! it's tiny but it's mine ✨",
+      media: { id: "d1_roomtour", kind: "photo", caption: "Yui's small room, half unpacked" } },
+    { id: "s04", from: "Yui", tier: "key", at: 34, text: "Kenji's giving me a campus tour rn, my tour guide 🥹",
+      media: { id: "naive_P12", kind: "photo", caption: "Campus-tour selfie at the Seiran gate, Kenji leaning in, hand on her shoulder" },
+      choices: [
+        { type: "wholesome", text: "cute!! the campus looks huge, don't get lost 🌸", reply: ["I would 100% get lost without him lol"] },
+        { type: "jealous", text: "why's he got his hand on you‼️", reply: ["what?? it's literally just his hand on my shoulder, he's like that with everyone"] },
+        { type: "protective", text: "he's very hands-on for someone with a girlfriend 🛡️", reply: ["lol Rika says he's like that with everyone, it's fine I promise 🥹"] }
+      ] },
+    { id: "s05", from: "Haruto", tier: "ambient", at: 48, text: "just saw Ren flying down the shotengai lol he's going to kill a granny" },
+    { id: "s06", from: "Yui", tier: "minor", at: 60, text: "Seiran has a whole building that's just the library, I'm going to live there",
+      choices: [ { text: "nerd 🥹", reply: ["proud nerd thank you"] },
+                 { text: "that sounds amazing", reply: ["it smells like old books, I'm obsessed"] } ] },
+    { id: "s07", from: "Daichi", channel: "insta", tier: "ambient", at: 80,
+      text: "Kenji's been 'helping someone move' since 9am 🙄 the dishes at Sakuragaoka aren't going to wash themselves" },
+    { id: "s08", from: "Yui", tier: "minor", at: 95, text: "did you eat lunch?? you'd better have",
+      choices: [ { text: "konbini onigiri between orders", reply: ["acceptable 😌"] },
+                 { text: "not yet, I'm working", reply: ["SORA. eat something"] } ] }
+  ] },
+  lateShift: { beats: [
+    { id: "l01", from: "Yui", tier: "minor", at: 10, text: "wait you're working NOW?? 😭",
+      choices: [ { text: "just a quick one, it's for the trip", reply: ["ok ok. come home safe"] },
+                 { text: "yeah", reply: ["oh. ok"] } ] },
+    { id: "l02", from: "HayaEats", tier: "ambient", at: 30, text: "Late shift: pay ×0.6 tonight." }
+  ] },
+  evening: { startClock: "18:30", beats: [
+    { id: "e01", from: "Yui", tier: "ambient", delay: 1, text: "back at the flat, my legs are dead from walking round campus 😩" },
+    { id: "e02", from: "Yui", tier: "minor", delay: 2, text: "first night in my own room!!",
+      media: { id: "all_P03", kind: "photo", caption: "Desk selfie, a grey hoodie on the chair behind her" },
+      choices: [ { text: "you look so happy", reply: ["I am!! 🥹"] },
+                 { text: "whose hoodie is that lol", reply: ["oh lol it's Kenji's, he must have taken it off when he was carrying stuff. I'll give it back to him"], set: { asked_hoodie: true } } ] },
+    { id: "e03", from: "Rika", channel: "insta", tier: "ambient", delay: 3, text: "new flatmate secured 🥂 welcome to Koenji @yui.hnmr",
+      media: { id: "d1_rika_post", kind: "photo", caption: "Rika and Yui with canned chuhai on the sofa" } },
+    { id: "e04", from: "Mom", tier: "minor", delay: 3, text: "how was work? did you make much?",
+      choices: [ { text: "not bad, it's all going in the trip fund", reply: ["good boy. Yui's lucky"] },
+                 { text: "it was ok", reply: ["ok love. go to bed early"] } ] },
+    { id: "e05", from: "Yui", tier: "key", delay: 4, text: "can I call you? I want to hear your voice before I sleep",
+      choices: [
+        { type: "call_now", text: "calling you now 📞", call: true, reply: ["that was so nice 🥹 I needed that"] },
+        { type: "call_later", text: "can we do it later? I'm wiped", reply: ["oh. ok, later then"] }
+      ] },
+    { id: "e06", from: "Yui", tier: "key", pivotal: true, delay: 3,
+      text: "Kenji says if I need anything I can just text him, he's round here half the time anyway lol",
+      choices: [
+        { type: "wholesome", text: "glad you've got people looking out for you, be safe ok?", reply: ["I will!! thank you for being so chill about Kenji helping btw 🥹"] },
+        { type: "forgiving", text: "it's fine, I trust you", reply: ["I know you do 🥹 thank you for not being weird about it"] },
+        { type: "encouraging", text: "lol he sounds fun, enjoy 😏", reply: ["lol you're so weird 😳 he IS kind of funny though ngl"] },
+        { type: "protective", text: "careful with him, older guys who 'help' usually want something", reply: ["aww you worry too much 🥹 he's Rika's bf, he's just nice!"] }
+      ],
+      pushback: { cold: { type: "cold", text: "k", reply: ["…ok"] },
+                  jealous: { type: "jealous", text: "why's a guy with a gf hanging round you", reply: ["he's not hanging round ME, he's here for Rika?? why are you being like this"] } } },
+    { id: "e07", from: "Haruto", tier: "minor", delay: 3, text: "so how's Tokyo girl",
+      choices: [ { text: "she's settled in, she sounds really happy", reply: ["good. don't get all mopey on me then"] },
+                 { text: "dunno, she's busy with her flatmates", reply: ["dude... call her"] } ] },
+    { id: "e08", from: "Yui", tier: "ambient", delay: 2, cond: { minN: 35, maxL: 40, any: true },
+      text: "it's so quiet without you", media: { id: "desperate_P01", kind: "photo", caption: "Lonely room, lights off" } },
+    { id: "e09", from: "Yui", tier: "minor", delay: 3, text: "ok I'm actually going to sleep now. night night 💕",
+      choices: [ { text: "night, I'm proud of you today. sleep well", reply: ["😴💕"] },
+                 { text: "night", reply: ["night"] } ] }
+  ] }
+};
+
+</script>
+<script>
+/* Last Train Home — Day 1 prototype engine. Content lives in data/day1.js. */
+(function () {
+'use strict';
+const GD = window.GAME_DATA, C = GD.config, AR = GD.archetypes, CT = GD.contacts;
+const SAVE_KEY = 'ltth_day1_save_v1';
+const $ = id => document.getElementById(id);
+const cv = $('cv'), ctx = cv.getContext('2d');
+const phoneEl = $('phone'), ov = $('overlay'), ocard = $('ocard'), ctrl = $('controls');
+const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+const yen = n => '¥' + Math.round(n).toLocaleString('en-US');
+const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+const hm = str => { const [h, m] = str.split(':').map(Number); return h * 3600 + m * 60; };
+const fmtClock = s => { s = Math.floor(s / 60); return String(Math.floor(s / 60) % 24).padStart(2, '0') + ':' + String(s % 60).padStart(2, '0'); };
+const ROUTE_TYPES = { wholesome: 'Naive', forgiving: 'Guilt', encouraging: 'Encouraged', cold: 'Desperate', jealous: 'Desperate' };
+
+let S = null;            // saved state
+let outbox = [];         // {due: realMs, msg} typing delays (not saved; flushed on save)
+let world = null;        // shift world (not saved)
+let keys = {}, joy = { x: 0, y: 0, on: false };
+let paused = false, lastT = performance.now(), saveTimer = 0, uiTimer = 0;
+let callUntil = 0;
+
+function newState() {
+  return { v: 1, day: 1, slot: 'title', clock: hm('07:00'), meters: { ...C.startMeters }, startMeters: { ...C.startMeters },
+    money: C.startMoney, earned: 0, spent: 0, lean: { wholesome: 0, forgiving: 0, encouraging: 0, cold: 0, jealous: 0, protective: 0 },
+    flags: {}, msgs: [], seq: 0, unread: {}, feedUnread: 0, q: null, pending: null, keyQueue: [], minors: [],
+    shifts: [], gifts: [], route: 'Naive', routeEval: 'Naive', harutoDone: false, lateDone: false,
+    phone: { open: true, screen: 'home' }, log: [] };
+}
+function save() {
+  if (!S) return;
+  outbox.forEach(o => pushMsg(o.msg, true)); outbox = [];
+  try { localStorage.setItem(SAVE_KEY, JSON.stringify(S)); } catch (e) {}
+}
+function load() { try { const j = localStorage.getItem(SAVE_KEY); return j ? JSON.parse(j) : null; } catch (e) { return null; } }
+function day() { return window.DAYS[S.day]; }
+function addM(d, why) {
+  if (!d) return;
+  for (const k in d) { const before = S.meters[k]; S.meters[k] = clamp(S.meters[k] + d[k], 0, 100);
+    S.log.push(`${fmtClock(S.clock)} ${k}${d[k] >= 0 ? '+' : ''}${d[k]} (${why}) ${before}→${S.meters[k]}`); }
+}
+
+/* ---------- routing (§3.3) ---------- */
+function evalRoute() {
+  const m = S.meters, cur = S.route;
+  if (m.E >= (cur === 'Encouraged' ? 35 : 40)) return 'Encouraged';
+  if (cur === 'Desperate' ? (m.N >= 30 || m.L < 45) : (m.N >= 35 || m.L < 40)) return 'Desperate';
+  if (m.I < (cur === 'Guilt' ? 50 : 45)) return 'Guilt';
+  return 'Naive';
+}
+function despCause() { return S.lean.jealous > S.lean.cold ? 'smothered' : 'absent'; }
+function dominantType() {
+  let best = null, n = 0;
+  for (const k of ['wholesome', 'forgiving', 'encouraging', 'cold', 'jealous']) if (S.lean[k] > n) { n = S.lean[k]; best = k; }
+  return best;
+}
+
+/* ---------- safe state ---------- */
+function isSafe() {
+  if (paused) return false;
+  if (S.slot !== 'shift') return true;
+  if (!world || world.done) return true;
+  const p = world.p;
+  return p.onFoot || p.handover > 0 || p.speed < 5;
+}
+
+/* ---------- messages ---------- */
+function chatOf(from) { return from; }
+function pushMsg(m, silent) {
+  m.id = ++S.seq; m.t = S.clock; S.msgs.push(m);
+  const viewing = S.phone.open && S.phone.screen === (m.channel === 'insta' ? 'insta' : 'chat:' + m.chat) && !isGlanceBlocked();
+  if (!m.me && !m.sys && !viewing) {
+    if (m.channel === 'insta') S.feedUnread++; else S.unread[m.chat] = (S.unread[m.chat] || 0) + 1;
+  }
+  if (!m.me && !m.sys && !silent) notify(m);
+  renderPhone(true);
+}
+function isGlanceBlocked() { return false; }
+function sendFrom(from, text, extra, delayMs) {
+  const msg = Object.assign({ chat: from, from, text }, extra || {});
+  if (from === 'Yui' && msg.channel !== 'insta') { outbox.push({ due: performance.now() + (delayMs ?? 1300), msg }); renderPhone(); }
+  else if (delayMs) outbox.push({ due: performance.now() + delayMs, msg });
+  else pushMsg(msg);
+}
+function notify(m) {
+  const b = $('banner'); const name = (CT[m.from] || { name: m.from }).name;
+  let prev = m.channel === 'insta' ? `${name} posted` : (m.media ? '📷 Photo' : m.text.slice(0, 40) + (m.text.length > 40 ? '…' : ''));
+  b.innerHTML = `<b>${esc(name)}</b> ${m.kind === 'key' ? '🔴' : m.kind === 'minor' ? '🟡' : ''}<br>${esc(prev)}`;
+  b.style.display = 'block'; clearTimeout(notify.t); notify.t = setTimeout(() => b.style.display = 'none', 3000);
+  b.onclick = () => { b.style.display = 'none'; openPhone(m.channel === 'insta' ? 'insta' : 'chat:' + m.chat); };
+  const st = $('stage'); st.className = ''; void st.offsetWidth; st.className = m.kind === 'key' ? 'buzz3' : m.kind === 'minor' ? 'buzz2' : 'buzz1';
+  if (navigator.vibrate) try { navigator.vibrate(m.kind === 'key' ? [400] : m.kind === 'minor' ? [80, 60, 80] : [60]); } catch (e) {}
+}
+
+/* ---------- beats ---------- */
+function condOk(b) {
+  if (!b.cond) return true;
+  const c = b.cond, m = S.meters, t = [];
+  if (c.minN != null) t.push(m.N >= c.minN); if (c.maxL != null) t.push(m.L < c.maxL);
+  return c.any ? t.some(Boolean) : t.every(Boolean);
+}
+function findBeat(id) {
+  const d = day();
+  for (const k of ['morning', 'shift', 'lateShift', 'evening']) { const b = d[k].beats.find(x => x.id === id); if (b) return b; }
+}
+function choicesFor(b) {
+  const list = b.choices.slice();
+  if (b.pushback) {
+    const pb = S.lean.jealous > S.lean.cold ? b.pushback.jealous : b.pushback.cold;
+    const pi = list.findIndex(c => c.type === 'protective'); list.splice(pi < 0 ? list.length : pi, 0, pb);
+  }
+  return list;
+}
+function fireBeat(b) {
+  const extra = { media: b.media, channel: b.channel, kind: b.tier, beat: b.id };
+  if (b.tier === 'minor') {
+    sendFrom(b.from, b.text, extra);
+    // window opens when it actually lands
+    S.minors.push({ beat: b.id, from: b.from, openedAt: null, deadline: null, slot: S.slot });
+  } else sendFrom(b.from, b.text, extra);
+}
+function readyKey(b, origin) {
+  S.pending = { beat: b.id, readyAt: S.clock, fired: false, steps: 0, origin };
+}
+function fireKeyNow() {
+  const p = S.pending, b = findBeat(p.beat);
+  p.fired = true; p.firedAt = S.clock;
+  sendFrom(b.from, b.text, { media: b.media, kind: 'key', beat: b.id, pivotal: !!b.pivotal }, 700);
+}
+function startQueue(slot) {
+  const d = day()[slot]; S.q = { slot, idx: 0, nextAt: S.clock + (d.beats[0]?.delay || 0) * 60, blocked: false, t0: 0 };
+}
+function tickQueue() {
+  const q = S.q; if (!q) return;
+  const beats = day()[q.slot].beats;
+  if (q.slot === 'shift' || q.slot === 'lateShift') {
+    if (!world) return;
+    while (q.idx < beats.length && world.elapsed >= beats[q.idx].at) {
+      const b = beats[q.idx++];
+      if (!condOk(b)) continue;
+      if (b.tier === 'key') S.keyQueue.push(b.id); else fireBeat(b);
+    }
+    return;
+  }
+  if (q.blocked || q.idx >= beats.length || S.clock < q.nextAt) return;
+  const b = beats[q.idx];
+  if (b.tier === 'key') {
+    if (S.pending) return;            // one key at a time
+    q.idx++; readyKey(b, q.slot); q.blocked = true;
+  } else {
+    q.idx++; if (condOk(b)) fireBeat(b);
+    if (q.idx < beats.length) q.nextAt = S.clock + beats[q.idx].delay * 60;
+  }
+}
+function unblockQueue() {
+  const q = S.q; if (!q || !q.blocked) return;
+  q.blocked = false; const beats = day()[q.slot].beats;
+  if (q.idx < beats.length) q.nextAt = S.clock + (beats[q.idx].delay || 1) * 60;
+}
+function slotScriptDone() { const q = S.q; return !q || q.idx >= day()[q.slot].beats.length; }
+function leaveSlot() {
+  // carry unfired keys, drop the rest
+  const q = S.q; if (!q) return;
+  const beats = day()[q.slot].beats;
+  for (let i = q.idx; i < beats.length; i++) if (beats[i].tier === 'key' && condOk(beats[i])) S.keyQueue.push(beats[i].id);
+  q.blocked = false; S.q = null;
+}
+
+/* ---------- key/minor timers ---------- */
+function tickTimers() {
+  const p = S.pending;
+  if (!p && S.keyQueue.length) { const b = findBeat(S.keyQueue.shift()); readyKey(b, 'carried'); }
+  if (S.pending && !S.pending.fired && isSafe()) fireKeyNow();
+  if (S.pending && S.pending.fired) {
+    const waitMin = (S.clock - S.pending.readyAt) / 60, imp = C.impatience;
+    while (S.pending.steps < imp.length && waitMin >= imp[S.pending.steps].min) {
+      const step = imp[S.pending.steps++]; sendFrom('Yui', step.text, { kind: 'imp' }, 400);
+      if (S.pending.steps <= 3) addM({ L: -1 }, 'impatience');
+    }
+  }
+  for (const m of S.minors.slice()) {
+    if (m.openedAt == null) { // has the message landed yet?
+      const landed = S.msgs.find(x => x.beat === m.beat && !x.me);
+      if (landed) { m.openedAt = S.clock; m.deadline = S.clock + C.minorWindowMin * 60; } else continue;
+    }
+    if (S.clock >= m.deadline) {
+      S.minors.splice(S.minors.indexOf(m), 1);
+      const msg = S.msgs.find(x => x.beat === m.beat && !x.me); if (msg) msg.resolved = 'missed';
+      if (m.from === 'Yui') {
+        const inShift = m.slot === 'shift' || S.slot === 'shift';
+        sendFrom('Yui', inShift ? GD.missedMinor.shift : GD.missedMinor.home, { kind: 'missed' }, 300);
+        if (!inShift) addM({ N: 3, L: -1 }, 'missed minor');
+      }
+      renderPhone(true);
+    }
+  }
+}
+function answer(beatId, idx) {
+  if (!isSafe()) return;
+  const b = findBeat(beatId); const msg = S.msgs.find(x => x.beat === beatId && !x.me);
+  if (!msg || msg.resolved) return;
+  if (b.tier === 'key') {
+    const ch = choicesFor(b)[idx], p = S.pending || { readyAt: S.clock };
+    const waitMin = (S.clock - p.readyAt) / 60;
+    addM({ N: Math.min(6, Math.floor(waitMin / 3)) }, 'waited ' + waitMin.toFixed(1) + 'm');
+    if (waitMin < 2) addM({ L: 1 }, 'fast reply');
+    addM(AR[ch.type].d, ch.type + (b.pivotal ? ' (pivotal)' : ''));
+    if (S.lean[ch.type] != null) S.lean[ch.type] += b.pivotal ? 2 : 1;
+    Object.assign(S.flags, ch.set || {});
+    S.flags['d1_' + beatId] = ch.type;
+    msg.resolved = ch.type; S.pending = null;
+    pushMsg({ chat: b.from, from: 'me', me: true, text: ch.text });
+    if (ch.call) startCall();
+    let delay = ch.call ? 4500 : 1400;
+    ch.reply.forEach(r => { sendFrom(b.from, r, { kind: 'reply' }, delay); delay += 1300; });
+    if (b.pivotal && S.q && S.q.slot === 'evening' && !S.harutoDone) {
+      const dom = dominantType(); if (dom) { S.harutoDone = true; outbox.push({ due: performance.now() + delay + 3000, msg: { chat: 'Haruto', from: 'Haruto', text: GD.haruto[dom], kind: 'ambient' } }); }
+    }
+    unblockQueue();
+  } else {
+    const ch = b.choices[idx], mi = S.minors.findIndex(x => x.beat === beatId);
+    const open = mi >= 0 ? S.minors[mi] : null; if (open) S.minors.splice(mi, 1);
+    if (b.from === 'Yui' && open && S.clock - open.openedAt < 120) addM({ L: 1, N: -1 }, 'quick minor reply');
+    if (ch.d) addM(ch.d, 'reply');
+    Object.assign(S.flags, ch.set || {});
+    msg.resolved = 'replied';
+    pushMsg({ chat: b.from, from: 'me', me: true, text: ch.text });
+    let delay = 1300; (ch.reply || []).forEach(r => { sendFrom(b.from, r, { kind: 'reply' }, delay); delay += 1200; });
+  }
+  save(); renderPhone(true); renderControls();
+}
+function startCall() {
+  callUntil = performance.now() + 4000; S.clock += 15 * 60;
+  showOverlay(`<h2>📞 Yui</h2><p class="muted">On a call…</p><p>She tells you about the vending machine, the library, and Rika's cooking. You tell her about Ren nearly running over a granny.</p><p class="muted">(+15 min)</p>`);
+  setTimeout(hideOverlay, 3800);
+}
+
+/* ---------- crash ---------- */
+function crash() {
+  const p = world.p; p.speed = 0; p.stun = 1.5; world.jobs[world.cur].crashed = true;
+  world.msg = 'You came off the bike!';
+  const cc = GD.crashCheck; S.flags.crashed_d1 = true;
+  const b = { id: 'crash' + S.seq, from: cc.from, tier: 'minor', text: cc.text, choices: cc.choices };
+  day().shift.beats.push(Object.assign({}, b, { at: 9999 })); // registered so findBeat works
+  fireBeat(b);
+}
+
+/* ---------- shift world ---------- */
+const MAP = { W: 3200, H: 2400, grid: 400, road: 30 };
+function rng(seed) { let s = seed >>> 0; return () => ((s = (s * 1664525 + 1013904223) >>> 0) / 4294967296); }
+function buildTown() {
+  const r = rng(1234), blocks = [], doors = [];
+  for (let gx = 0; gx < MAP.W / MAP.grid; gx++) for (let gy = 0; gy < MAP.H / MAP.grid; gy++) {
+    const x0 = gx * MAP.grid + 230, y0 = gy * MAP.grid + 230, w = MAP.grid - 60, h = MAP.grid - 60;
+    let type = r() < 0.3 ? 'rice' : r() < 0.15 ? 'park' : 'houses';
+    if (gx === 3 && gy === 0) type = 'station'; if (gy === 3 && (gx === 3 || gx === 4)) type = 'shotengai';
+    if (gx >= 7) type = r() < 0.5 ? 'hill' : 'houses';
+    blocks.push({ x0, y0, w, h, type, col: `hsl(${Math.floor(r() * 360)},35%,55%)` });
+    if (type === 'houses' || type === 'shotengai' || type === 'hill') {
+      for (let i = 0; i < 3; i++) {
+        const side = Math.floor(r() * 4), t = 60 + r() * (w - 120);
+        const d = side === 0 ? { x: x0 + t, y: y0 + 40 } : side === 1 ? { x: x0 + w - 40, y: y0 + t } : side === 2 ? { x: x0 + t, y: y0 + h - 40 } : { x: x0 + 40, y: y0 + t };
+        d.name = ['Sato', 'Suzuki', 'Tanaka', 'Watanabe', 'Ito', 'Yamamoto', 'Nakamura', 'Kobayashi', 'Kato', 'Yoshida', 'Yamada', 'Sasaki', 'Matsumoto', 'Inoue', 'Kimura'][Math.floor(r() * 15)];
+        doors.push(d);
+      }
+    }
+  }
+  return { blocks, doors };
+}
+const TOWN = buildTown();
+function onRoad(x, y) {
+  const g = MAP.grid, rr = MAP.road;
+  const mx = ((x - 200) % g + g) % g, my = ((y - 200) % g + g) % g;
+  return mx < rr || mx > g - rr || my < rr || my > g - rr;
+}
+function zoneMult(x, y) { let m = 1; if (x > 2800) m *= 0.65; if (x > 1380 && x < 1820 && y < 620) m *= 0.75; return m; }
+function startShift(diffKey, late) {
+  const dif = C.difficulties[diffKey], r = rng((Date.now() & 0xffff) + 7);
+  const hub = { x: 1800, y: 1000 };
+  let prev = hub; const jobs = []; const used = new Set();
+  for (let i = 0; i < 3; i++) {
+    let cands = TOWN.doors.filter((d, j) => !used.has(j) && (() => { const md = Math.abs(d.x - prev.x) + Math.abs(d.y - prev.y); return md >= dif.leg[0] && md <= dif.leg[1]; })());
+    if (!cands.length) cands = TOWN.doors.filter((d, j) => !used.has(j));
+    const d = cands[Math.floor(r() * cands.length)]; used.add(TOWN.doors.indexOf(d));
+    jobs.push({ door: d, legTime: 0, pay: 0, done: false, crashed: false }); prev = d;
+  }
+  world = { diff: diffKey, dif, late: !!late, mult: late ? C.lateShift.mult : 1, jobs, cur: 0, timeLeft: C.shiftSeconds, elapsed: 0, legStart: 0, done: false,
+    p: { x: hub.x, y: hub.y, dir: 0, speed: 0, onFoot: false, bx: hub.x, by: hub.y, handover: 0, stun: 0, wob: 0, brake: false }, msg: 'Ride to customer 1 →' };
+  S.slot = 'shift'; S.clock = late ? hm('20:30') : hm(day().shift.startClock);
+  S.q = { slot: late ? 'lateShift' : 'shift', idx: 0 };
+  if (late) { S.lateDone = true; addM({ N: C.lateShift.N }, 'late shift'); }
+  closePhone(); hideOverlay(); renderControls(); save();
+}
+function endShift(reason) {
+  world.done = true;
+  const pays = world.jobs.map(j => j.pay), total = pays.reduce((a, b) => a + b, 0);
+  S.money += total; S.earned += total;
+  S.shifts.push({ diff: world.diff, late: world.late, total, jobs: world.jobs.map(j => ({ to: j.door.name, leg: +j.legTime.toFixed(1), pay: j.pay, done: j.done, crashed: j.crashed })), reason });
+  const wasLate = world.late; leaveSlot();
+  const rows = world.jobs.map((j, i) => `<tr><td>${i + 1}. ${esc(j.door.name)}</td><td>${j.done ? j.legTime.toFixed(1) + 's' : '—'}</td><td>${j.done ? yen(j.pay) + (j.crashed ? ' (crash ½)' : '') : '<span class="bad">not reached ¥0</span>'}</td></tr>`).join('');
+  sendFrom('HayaEats', `Shift complete: ${yen(total)} earned. Savings ${yen(S.money)} / ${yen(C.tripTarget)}.`, { kind: 'ambient' });
+  showOverlay(`<h2>${reason === 'timeout' ? '⏱️ Time\'s up' : '✅ Shift done'}</h2>
+    <p class="muted">${world.dif.label}${wasLate ? ' · late shift ×0.6' : ''} · par ${world.dif.par}s per leg · max ${yen(world.dif.maxPay * world.mult)} per job</p>
+    <table class="sum">${rows}</table><p>Total <b>${yen(total)}</b> · Savings <b>${yen(S.money)}</b></p>
+    <button class="primary" id="goHome" style="width:100%">Head home 🏠</button>`);
+  $('goHome').onclick = () => { world = null; toEvening(wasLate); };
+  save();
+}
+function tickShift(dt) {
+  const w = world; if (!w || w.done) return;
+  w.timeLeft -= dt; w.elapsed += dt;
+  if (w.timeLeft <= 0) { w.timeLeft = 0; endShift('timeout'); return; }
+  const p = w.p;
+  let ix = (keys.ArrowRight || keys.d ? 1 : 0) - (keys.ArrowLeft || keys.a ? 1 : 0) + joy.x;
+  let iy = (keys.ArrowDown || keys.s ? 1 : 0) - (keys.ArrowUp || keys.w ? 1 : 0) + joy.y;
+  const mag = Math.hypot(ix, iy); if (mag > 1) { ix /= mag; iy /= mag; }
+  if (p.stun > 0) { p.stun -= dt; ix = iy = 0; }
+  if (p.handover > 0) {
+    p.handover -= dt; ix = iy = 0;
+    if (p.handover <= 0) completeJob();
+  }
+  if (p.onFoot) {
+    const sp = C.walkSpeed; p.x += ix * sp * dt; p.y += iy * sp * dt; p.speed = Math.hypot(ix, iy) * sp;
+    const j = w.jobs[w.cur];
+    if (j && !j.done && p.handover <= 0 && Math.hypot(p.x - j.door.x, p.y - j.door.y) < 30) { p.handover = 1.2; w.msg = 'Handing over the food…'; }
+  } else {
+    const max = C.bikeMaxSpeed * (onRoad(p.x, p.y) ? 1 : 0.35) * zoneMult(p.x, p.y);
+    const phoneUp = S.phone.open;
+    if (mag > 0.1 && !p.brake) {
+      let target = Math.atan2(iy, ix);
+      if (phoneUp && p.speed > 20) { p.wob += dt * 9; target += Math.sin(p.wob) * 0.35 * (S.flags.mount ? 0.5 : 1); }
+      let da = ((target - p.dir + Math.PI * 3) % (Math.PI * 2)) - Math.PI; p.dir += clamp(da, -6 * dt, 6 * dt);
+      p.speed = Math.min(max * Math.min(1, mag), p.speed + 260 * dt);
+    } else p.speed = Math.max(0, p.speed - (p.brake ? 420 : 160) * dt);
+    if (p.speed > max) p.speed = Math.max(max, p.speed - 300 * dt);
+    if (p.brake && p.speed < 5) p.brake = false;
+    p.x += Math.cos(p.dir) * p.speed * dt; p.y += Math.sin(p.dir) * p.speed * dt;
+    if (phoneUp && p.speed > 110 && Math.random() < dt * 0.06 * (S.flags.mount ? 0.5 : 1)) crash();
+  }
+  p.x = clamp(p.x, 10, MAP.W - 10); p.y = clamp(p.y, 10, MAP.H - 10);
+  S.clock += dt * C.gameSecondsPerRealSecond;
+}
+function completeJob() {
+  const w = world, j = w.jobs[w.cur];
+  j.done = true; j.legTime = w.elapsed - w.legStart;
+  j.pay = Math.round(w.dif.maxPay * clamp(w.dif.par / j.legTime, 0.4, 1) * (j.crashed ? 0.5 : 1) * w.mult);
+  sendFrom('HayaEats', `Delivered to ${j.door.name}: ${yen(j.pay)} (${j.legTime.toFixed(1)}s)`, { kind: 'ambient' });
+  w.cur++; w.legStart = w.elapsed;
+  if (w.cur >= w.jobs.length) { endShift('all'); return; }
+  w.msg = `Walk back to your bike, then ride to customer ${w.cur + 1}`;
+}
+function action() { // big button / E / Space
+  if (S.slot !== 'shift' || !world || world.done) return;
+  const p = world.p;
+  if (p.handover > 0 || p.stun > 0) return;
+  if (!p.onFoot) {
+    if (p.speed >= 5) { p.brake = true; return; }
+    p.onFoot = true; p.bx = p.x; p.by = p.y; p.speed = 0; world.msg = 'On foot: walk to the door';
+  } else if (Math.hypot(p.x - p.bx, p.y - p.by) < 40) { p.onFoot = false; p.x = p.bx; p.y = p.by; world.msg = `Ride to customer ${world.cur + 1}`; }
+  renderPhone(true);
+}
+
+/* ---------- drawing ---------- */
+function resize() {
+  const r = cv.getBoundingClientRect(), dpr = Math.min(2, window.devicePixelRatio || 1);
+  cv.width = Math.round(r.width * dpr); cv.height = Math.round(r.height * dpr); ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+}
+function draw() {
+  const W = cv.clientWidth, H = cv.clientHeight;
+  ctx.clearRect(0, 0, W, H);
+  if (S && S.slot === 'shift' && world) drawTown(W, H); else drawRoom(W, H);
+}
+function drawRoom(W, H) {
+  const ev = S && (S.slot === 'evening' || S.slot === 'summary');
+  ctx.fillStyle = ev ? '#1c2033' : '#3b3f52'; ctx.fillRect(0, 0, W, H);
+  ctx.fillStyle = ev ? '#0f1a33' : '#9fd3ff'; ctx.fillRect(W * 0.55, H * 0.1, W * 0.35, H * 0.18); // window
+  if (ev) { ctx.fillStyle = '#ffe9a8'; ctx.beginPath(); ctx.arc(W * 0.8, H * 0.15, 10, 0, 7); ctx.fill(); }
+  ctx.fillStyle = '#5a4634'; ctx.fillRect(W * 0.08, H * 0.35, W * 0.4, H * 0.08); // desk
+  ctx.fillStyle = '#6c7aa6'; ctx.fillRect(W * 0.5, H * 0.45, W * 0.42, H * 0.28); // bed
+  ctx.fillStyle = '#e5e5ef'; ctx.fillRect(W * 0.52, H * 0.47, W * 0.12, H * 0.07);
+  ctx.fillStyle = '#ff7a45'; ctx.fillRect(W * 0.12, H * 0.6, W * 0.2, H * 0.05); // bike
+  ctx.fillStyle = '#fff'; ctx.font = '600 20px system-ui'; ctx.textAlign = 'center';
+  const lbl = !S || S.slot === 'title' ? 'Last Train Home' : `${S.slot === 'evening' ? 'Evening' : S.slot === 'summary' ? 'Night' : 'Morning'} · ${fmtClock(S.clock)}`;
+  ctx.fillText(lbl, W / 2, H * 0.84);
+  ctx.font = '14px system-ui'; ctx.fillStyle = '#bbb'; ctx.fillText("Sora's room, Minase", W / 2, H * 0.84 + 22);
+  if (S && S.slot !== 'title') ctx.fillText(`Trip fund ${yen(S.money)} / ${yen(C.tripTarget)}`, W / 2, H * 0.84 + 42);
+}
+function drawTown(W, H) {
+  const w = world, p = w.p, cx = p.x - W / 2, cy = p.y - H / 2;
+  ctx.fillStyle = '#3d6b3a'; ctx.fillRect(0, 0, W, H);
+  ctx.save(); ctx.translate(-cx, -cy);
+  for (const b of TOWN.blocks) {
+    if (b.x0 + b.w < cx || b.x0 > cx + W || b.y0 + b.h < cy || b.y0 > cy + H) continue;
+    if (b.type === 'rice') { ctx.fillStyle = '#7fb55a'; ctx.fillRect(b.x0, b.y0, b.w, b.h); ctx.strokeStyle = '#6a9c4a'; for (let y = b.y0 + 12; y < b.y0 + b.h; y += 16) { ctx.beginPath(); ctx.moveTo(b.x0, y); ctx.lineTo(b.x0 + b.w, y); ctx.stroke(); } }
+    else if (b.type === 'park') { ctx.fillStyle = '#2f7d3a'; ctx.fillRect(b.x0, b.y0, b.w, b.h); }
+    else if (b.type === 'hill') { ctx.fillStyle = '#4c5e36'; ctx.fillRect(b.x0, b.y0, b.w, b.h); ctx.strokeStyle = '#5d7244'; for (let r = 40; r < 170; r += 30) { ctx.beginPath(); ctx.arc(b.x0 + b.w / 2, b.y0 + b.h / 2, r, 0, 7); ctx.stroke(); } }
+    else if (b.type === 'station') { ctx.fillStyle = '#8a8f9e'; ctx.fillRect(b.x0, b.y0, b.w, b.h); ctx.fillStyle = '#333'; ctx.fillRect(b.x0, b.y0 + b.h / 2 - 6, b.w, 12); ctx.fillStyle = '#fff'; ctx.font = '600 22px system-ui'; ctx.textAlign = 'center'; ctx.fillText('Minase Stn 🚉', b.x0 + b.w / 2, b.y0 + 40); }
+    else { ctx.fillStyle = b.type === 'shotengai' ? '#b5866a' : '#9c9a86'; ctx.fillRect(b.x0, b.y0, b.w, b.h);
+      if (b.type === 'shotengai') { ctx.fillStyle = '#fff'; ctx.font = '600 18px system-ui'; ctx.textAlign = 'center'; ctx.fillText('shotengai', b.x0 + b.w / 2, b.y0 + b.h / 2); } }
+  }
+  ctx.fillStyle = '#4a4a52'; // roads
+  for (let x = 200; x < MAP.W; x += MAP.grid) ctx.fillRect(x - MAP.road, 0, MAP.road * 2, MAP.H);
+  for (let y = 200; y < MAP.H; y += MAP.grid) ctx.fillRect(0, y - MAP.road, MAP.W, MAP.road * 2);
+  ctx.fillStyle = '#d8d8a0';
+  for (let x = 200; x < MAP.W; x += MAP.grid) for (let y = 0; y < MAP.H; y += 40) ctx.fillRect(x - 1, y, 2, 18);
+  for (const d of TOWN.doors) { ctx.fillStyle = '#c96'; ctx.fillRect(d.x - 12, d.y - 12, 24, 24); }
+  ctx.fillStyle = '#ff7a45'; ctx.fillRect(1760, 960, 80, 80); ctx.fillStyle = '#111'; ctx.font = '600 14px system-ui'; ctx.textAlign = 'center'; ctx.fillText('HayaEats', 1800, 1005);
+  const j = w.jobs[w.cur], t = performance.now() / 300;
+  if (j) { ctx.strokeStyle = '#ffde59'; ctx.lineWidth = 4; ctx.beginPath(); ctx.arc(j.door.x, j.door.y, 26 + Math.sin(t) * 5, 0, 7); ctx.stroke(); ctx.lineWidth = 1;
+    ctx.fillStyle = '#fff'; ctx.font = '600 15px system-ui'; ctx.fillText(`${w.cur + 1}. ${j.door.name}`, j.door.x, j.door.y - 36); }
+  if (p.onFoot) { ctx.fillStyle = '#ff7a45'; ctx.fillRect(p.bx - 14, p.by - 6, 28, 12); }
+  ctx.save(); ctx.translate(p.x, p.y);
+  if (p.onFoot) { ctx.fillStyle = '#ffd27f'; ctx.beginPath(); ctx.arc(0, 0, 10, 0, 7); ctx.fill(); }
+  else { ctx.rotate(p.dir); ctx.fillStyle = p.stun > 0 ? '#f55' : '#ff7a45'; ctx.fillRect(-16, -7, 32, 14); ctx.fillStyle = '#111'; ctx.fillRect(8, -5, 8, 10); }
+  ctx.restore(); ctx.restore();
+  // pointer to target
+  if (j) { const a = Math.atan2(j.door.y - p.y, j.door.x - p.x), dist = Math.hypot(j.door.x - p.x, j.door.y - p.y);
+    if (dist > 120) { ctx.save(); ctx.translate(W / 2 + Math.cos(a) * 70, H / 2 + Math.sin(a) * 70); ctx.rotate(a); ctx.fillStyle = '#ffde59'; ctx.beginPath(); ctx.moveTo(14, 0); ctx.lineTo(-8, -9); ctx.lineTo(-8, 9); ctx.fill(); ctx.restore(); } }
+  // minimap
+  const mw = 110, mh = mw * MAP.H / MAP.W, mx = W - mw - 8, my = 86;
+  ctx.fillStyle = 'rgba(0,0,0,.55)'; ctx.fillRect(mx, my, mw, mh);
+  ctx.fillStyle = '#ffde59'; w.jobs.forEach((jj, i) => { if (!jj.done) ctx.fillRect(mx + jj.door.x / MAP.W * mw - 2, my + jj.door.y / MAP.H * mh - 2, i === w.cur ? 6 : 4, i === w.cur ? 6 : 4); });
+  ctx.fillStyle = '#fff'; ctx.fillRect(mx + p.x / MAP.W * mw - 2, my + p.y / MAP.H * mh - 2, 4, 4);
+  // HUD
+  ctx.fillStyle = 'rgba(0,0,0,.6)'; ctx.fillRect(0, 0, W, 50);
+  ctx.textAlign = 'left'; ctx.font = '700 22px system-ui'; ctx.fillStyle = w.timeLeft < 20 ? '#ff6b6b' : '#fff';
+  const tl = Math.ceil(w.timeLeft); ctx.fillText(`⏱ ${Math.floor(tl / 60)}:${String(tl % 60).padStart(2, '0')}`, 54, 33);
+  ctx.font = '14px system-ui'; ctx.fillStyle = '#ddd';
+  const leg = w.elapsed - w.legStart, proj = j ? Math.round(w.dif.maxPay * clamp(w.dif.par / Math.max(leg, 0.01), 0.4, 1) * w.mult * (j.crashed ? .5 : 1)) : 0;
+  ctx.fillText(`Job ${Math.min(w.cur + 1, 3)}/3 · leg ${leg.toFixed(0)}s/${w.dif.par}s · ${yen(proj)}`, 150, 22);
+  const state = p.handover > 0 ? 'Handover' : p.onFoot ? 'On foot (safe)' : p.speed < 5 ? 'Stopped (safe)' : 'Riding';
+  ctx.fillStyle = state === 'Riding' ? '#ffb36b' : '#8fe08f'; ctx.fillText(state + (S.pending ? ' · 🔴 Yui waiting' : ''), 150, 40);
+  ctx.fillStyle = 'rgba(0,0,0,.55)'; ctx.fillRect(0, H - 220, W, 0);
+  if (w.msg) { ctx.textAlign = 'center'; ctx.font = '600 15px system-ui'; ctx.fillStyle = '#fff'; ctx.fillText(w.msg, W / 2, 72); }
+}
+
+/* ---------- phone UI ---------- */
+function badgeCounts() {
+  let red = S.pending && S.pending.fired ? 1 : 0, yellow = S.minors.filter(m => m.openedAt != null).length, white = 0;
+  for (const k in S.unread) white += S.unread[k]; white += S.feedUnread;
+  return { red, yellow, white };
+}
+function openPhone(screen) { S.phone.open = true; if (screen) S.phone.screen = screen; clearUnread(); renderPhone(true); renderControls(); }
+function closePhone() { S.phone.open = false; renderPhone(true); renderControls(); }
+function clearUnread() { const sc = S.phone.screen; if (sc.startsWith('chat:')) S.unread[sc.slice(5)] = 0; if (sc === 'insta') S.feedUnread = 0; }
+let lastPhoneSig = '';
+function renderPhone(force) {
+  if (!S) return;
+  const glance = S.slot === 'shift' && world && !world.done && !isSafe();
+  phoneEl.className = !S.phone.open || paused || S.slot === 'title' ? 'closed' : glance ? 'glance' : '';
+  const sig = [S.phone.screen, S.msgs.length, glance, isSafe(), outbox.length, S.money, S.slot, JSON.stringify(badgeCounts()), Math.floor(S.clock / 60)].join('|');
+  if (!force && sig === lastPhoneSig) return; lastPhoneSig = sig;
+  if (S.phone.open) clearUnread();
+  const bc = badgeCounts();
+  $('phoneBtn').innerHTML = '📱' + (bc.red ? `<span class="badge">${bc.red}</span>` : bc.yellow ? `<span class="badge y">${bc.yellow}</span>` : bc.white ? `<span class="badge w">${bc.white}</span>` : '');
+  if (phoneEl.className === 'closed') return;
+  const sc = S.phone.screen; let body = '';
+  const closeLbl = S.slot === 'shift' ? '✕ Map' : '✕ Room';
+  const bar = `<div class="pbar"><span>${fmtClock(S.clock)} · ${yen(S.money)}</span>${glance ? '<span class="ring">glance · stop to reply</span>' : ''}<button data-a="close">${closeLbl}</button></div>`;
+  if (sc === 'home') {
+    const ur = c => S.unread[c] || 0, lineUnread = Object.values(S.unread).reduce((a, b) => a + b, 0);
+    body = `<div class="pscroll"><div class="apps">
+      <div class="app" data-go="chats"><div class="ic">💬</div>LINE${lineUnread ? `<span class="badge">${lineUnread}</span>` : ''}</div>
+      <div class="app" data-go="insta"><div class="ic">📸</div>Insta${S.feedUnread ? `<span class="badge">${S.feedUnread}</span>` : ''}</div>
+      <div class="app" data-go="haya"><div class="ic">🛵</div>HayaEats</div></div>
+      <div style="padding:0 20px">${slotActionsHTML()}</div></div>`;
+  } else if (sc === 'chats') {
+    const chats = [...new Set(S.msgs.filter(m => m.channel !== 'insta' && !m.sys).map(m => m.chat))].reverse();
+    body = top('LINE') + `<div class="pscroll" style="padding:0">` + (chats.map(c => {
+      const last = S.msgs.filter(m => m.chat === c && m.channel !== 'insta').pop(), ct = CT[c] || { name: c, color: '#aaa' };
+      const pend = S.msgs.some(m => m.chat === c && m.choices !== undefined) ; 
+      const needs = S.msgs.some(m => m.chat === c && !m.me && (m.kind === 'key' || m.kind === 'minor') && !m.resolved);
+      return `<div class="chatrow" data-go="chat:${c}"><div class="av" style="background:${ct.color}">${esc(ct.name[0])}</div><div style="flex:1"><b>${esc(ct.name)}</b> ${needs ? '🔴' : ''}<div class="prev">${last.me ? 'You: ' : ''}${esc(last.media && !last.me ? '📷 Photo' : last.text)}</div></div>${S.unread[c] ? `<span class="badge" style="position:static">${S.unread[c]}</span>` : ''}</div>`;
+    }).join('') || '<p class="muted" style="padding:16px">No messages yet.</p>') + '</div>';
+  } else if (sc.startsWith('chat:')) {
+    const c = sc.slice(5), ct = CT[c] || { name: c };
+    const list = S.msgs.filter(m => m.chat === c && m.channel !== 'insta');
+    const typing = outbox.some(o => o.msg.chat === c);
+    body = top(ct.name, c === 'Yui' ? ct.status : '') + `<div class="pscroll" id="chatScroll">` + list.map(msgHTML).join('') + '</div>' + (typing ? `<div class="typing">${esc(ct.name)} is typing…</div>` : '') + choicesHTML(list);
+  } else if (sc === 'insta') {
+    const posts = S.msgs.filter(m => m.channel === 'insta').slice().reverse();
+    body = top('Insta') + `<div class="pscroll">` + (posts.map(m => `<div class="post"><div class="who" style="color:${(CT[m.from] || {}).color}">${esc((CT[m.from] || { name: m.from }).name)}</div>${m.media ? photoHTML(m.media) : ''}<div>${esc(m.text)}</div><div class="muted" style="font-size:11px">${fmtClock(m.t)}</div></div>`).join('') || '<p class="muted">Nothing new.</p>') + '</div>';
+  } else if (sc === 'haya') {
+    const pct = clamp(S.money / C.tripTarget * 100, 0, 100), shopOpen = S.slot === 'morning' || S.slot === 'evening';
+    body = top('HayaEats') + `<div class="pscroll"><div><b>Trip fund</b> ${yen(S.money)} / ${yen(C.tripTarget)}<div class="savebar"><div style="width:${pct}%"></div></div></div>
+      ${S.slot === 'shift' && world ? `<div class="post">Job ${Math.min(world.cur + 1, 3)}/3 · ${world.dif.label}</div>` : ''}
+      <h3 style="margin:8px 0 2px">Gifts &amp; gear ${shopOpen ? '' : '<span class="muted">(closed during shifts)</span>'}</h3>
+      <div class="muted" style="font-size:12px">Gifts arrive at her flat the next day.</div>
+      ${GD.shop.filter(i => !i.minE || S.meters.E >= i.minE).map(i => `<div class="shopitem"><div><b>${esc(i.name)}</b><div class="muted" style="font-size:12px">${esc(i.desc)}</div></div>
+        <button data-buy="${i.id}" ${!shopOpen || S.money < i.price || S.gifts.includes(i.id) ? 'disabled' : ''}>${S.gifts.includes(i.id) ? 'Bought' : yen(i.price)}</button></div>`).join('')}</div>`;
+  }
+  phoneEl.innerHTML = bar + `<div class="pbody">${body}</div>`;
+  const cs = $('chatScroll'); if (cs) cs.scrollTop = cs.scrollHeight;
+}
+function top(title, sub) { return `<div class="ptop"><button class="back" data-go="${S.phone.screen.startsWith('chat:') ? 'chats' : 'home'}">‹</button><div class="title">${esc(title)}${sub ? `<div class="sub">${esc(sub)}</div>` : ''}</div></div>`; }
+function photoHTML(md) { return `<div class="photo"><b>📷 ${esc(md.id)}</b>${esc(md.caption || '')}</div>`; }
+function msgHTML(m) {
+  if (m.sys) return `<div class="msg sys">${esc(m.text)}</div>`;
+  return `<div class="msg ${m.me ? 'me' : ''}">${m.media ? photoHTML(m.media) : ''}${esc(m.text)}<div class="t">${fmtClock(m.t)}${m.me ? ' · 既読' : ''}${m.resolved === 'missed' ? ' · missed' : ''}</div></div>`;
+}
+function choicesHTML(list) {
+  const m = list.slice().reverse().find(x => !x.me && x.beat && (x.kind === 'key' || x.kind === 'minor') && !x.resolved);
+  if (!m) return '';
+  const b = findBeat(m.beat); if (!b) return '';
+  const safe = isSafe(), chs = b.tier === 'key' ? choicesFor(b) : b.choices;
+  let lbl = b.tier === 'key' ? (b.pivotal ? '🔴 Big moment' : '🔴 She\'s waiting for an answer') : '';
+  if (b.tier === 'minor') { const mi = S.minors.find(x => x.beat === b.id); if (mi && mi.deadline) lbl = `<span class="ring">🟡 reply window ${Math.max(0, Math.ceil((mi.deadline - S.clock) / 60))} min</span>`; }
+  return `<div class="choices ${b.pivotal ? 'pivotal' : ''}"><div class="lbl">${lbl}</div>` + chs.map((c, i) =>
+    `<button data-ans="${b.id}" data-i="${i}" ${safe ? '' : 'disabled'}>${safe ? esc(c.text) : 'Pull over to reply 🚲'}</button>`).join('') + '</div>';
+}
+function slotActionsHTML() {
+  if (S.slot === 'morning') return `<button class="primary" data-a="work" style="width:100%" ${canLeaveMorning() ? '' : 'disabled'}>Go to work 🛵</button><p class="muted" style="font-size:12px">${canLeaveMorning() ? (S.pending ? 'Yui is still waiting on an answer. You can reply on a stop during the shift.' : '') : 'Your morning texts are still coming in…'}</p>`;
+  if (S.slot === 'evening') return `<button class="primary" data-a="sleep" style="width:100%" ${canSleep() ? '' : 'disabled'}>Sleep 😴</button>
+    <p class="muted" style="font-size:12px">${canSleep() ? '' : (S.pending || S.keyQueue.length) ? "Yui's waiting for an answer." : 'Evening texts are still coming in…'}</p>
+    ${S.lateDone ? '' : '<button data-a="late" style="width:100%">Take a late shift (pay ×0.6, Yui notices)</button>'}`;
+  return '';
+}
+function canLeaveMorning() {
+  if (S.slot !== 'morning') return false; if (slotScriptDone()) return true;
+  const q = S.q, beats = day().morning.beats; return q.blocked && !beats.slice(q.idx).some(b => b.tier === 'key');
+}
+function canSleep() { return S.slot === 'evening' && slotScriptDone() && !S.pending && !S.keyQueue.length && !outbox.length; }
+
+phoneEl.addEventListener('click', e => {
+  const t = e.target.closest('[data-go],[data-a],[data-ans],[data-buy]'); if (!t) return;
+  if (t.dataset.go) { S.phone.screen = t.dataset.go; clearUnread(); renderPhone(true); }
+  else if (t.dataset.ans) answer(t.dataset.ans, +t.dataset.i);
+  else if (t.dataset.buy) buy(t.dataset.buy);
+  else slotAction(t.dataset.a);
+});
+function slotAction(a) {
+  if (a === 'close') closePhone();
+  else if (a === 'work') toShiftSelect(false);
+  else if (a === 'late') toShiftSelect(true);
+  else if (a === 'sleep') sleep();
+  else if (a === 'phone') openPhone();
+}
+function buy(id) {
+  const it = GD.shop.find(i => i.id === id); if (!it || S.money < it.price || !(S.slot === 'morning' || S.slot === 'evening')) return;
+  S.money -= it.price; S.spent += it.price; S.gifts.push(id); S.flags['gift_' + id] = true; if (id === 'mount') S.flags.mount = true;
+  addM(it.d, 'gift ' + id);
+  sendFrom('HayaEats', it.self ? `${it.name} fitted. Ride safe!` : `${it.name} ordered for Yui. It arrives at her flat tomorrow.`, { kind: 'ambient' });
+  save(); renderPhone(true);
+}
+
+/* ---------- slot flow ---------- */
+function toMorning() {
+  S.slot = 'morning'; S.clock = hm(day().morning.startClock); startQueue('morning');
+  openPhone('home'); renderControls(); save();
+}
+function toShiftSelect(late) {
+  if (!late) leaveSlot();
+  S.slot = late ? 'evening' : 'shift_select';
+  const ds = C.difficulties;
+  showOverlay(`<h2>🛵 HayaEats ${late ? 'late shift' : 'afternoon shift'}</h2>
+    <p class="muted">3 customers, one 2:00 timer. Each job pays by how fast you reach it. Anyone you don't reach pays ¥0. Yui keeps texting; stopping to reply costs time.${late ? ' Late shift pays ×0.6.' : ''}</p>
+    <div class="diff">${Object.keys(ds).map(k => `<button data-d="${k}"><b>${ds[k].label}</b> · up to ${yen(ds[k].maxPay * 3 * (late ? C.lateShift.mult : 1))}<br><span class="muted">${ds[k].desc} · par ${ds[k].par}s/leg</span></button>`).join('')}</div>
+    <p class="muted" style="font-size:13px">Controls: joystick or WASD/arrows to ride. STOP button (or E/Space) brakes, then gets off the bike. Walk into the yellow ring to hand over. 📱 (or P) opens the phone; you can read while riding, but you can only reply when you're stopped or on foot.</p>
+    ${late ? '<button data-d="cancel" style="width:100%">Never mind</button>' : ''}`);
+  ocard.querySelectorAll('[data-d]').forEach(b => b.onclick = () => { if (b.dataset.d === 'cancel') { hideOverlay(); return; } startShift(b.dataset.d, late); });
+  renderControls(); save();
+}
+function toEvening(fromLate) {
+  hideOverlay(); S.slot = 'evening';
+  if (!fromLate) { S.clock = Math.max(S.clock, hm(day().evening.startClock)); startQueue('evening'); }
+  else { S.clock = Math.max(S.clock, hm('22:00')); if (S.eveningQ) S.q = S.eveningQ; }
+  openPhone('home'); renderControls(); save();
+}
+function sleep() {
+  if (!canSleep()) return;
+  const before = { ...S.meters };
+  addM({ I: -2 }, 'story drift CP1'); addM({ N: -5 }, 'sleep decay');
+  const ev = evalRoute(); S.routeEval = ev;
+  if (ev !== S.route) S.flags.route_warning = ev; // §16.4: deferred one checkpoint, warn in D2
+  S.flags.cp1 = S.route; S.flags.desp_cause = despCause();
+  const dom = dominantType();
+  const refMap = { wholesome: 'Naive', forgiving: 'Guilt', encouraging: 'Encouraged', cold: 'Desperate_absent', jealous: 'Desperate_smothered' };
+  const refKey = S.route === 'Desperate' ? 'Desperate_' + despCause() : (ev !== 'Naive' && dom ? refMap[dom] : S.route);
+  S.reflection = GD.reflections[refKey] || GD.reflections.Naive;
+  S.slot = 'summary'; S.phone.open = false; save(); showSummary(); renderControls();
+}
+function showSummary() {
+  const m = S.meters, s0 = S.startMeters;
+  const row = k => { const d = m[k] - s0[k]; return `<tr><td>${{ L: 'Love', I: 'Innocence', E: 'Encourage', N: 'Neglect' }[k]}</td><td>${s0[k]} → <b>${m[k]}</b></td><td class="${(k === 'N' ? -d : d) > 0 ? 'good' : d !== 0 ? 'bad' : ''}">${d > 0 ? '+' : ''}${d}</td></tr>`; };
+  const lean = { Naive: S.lean.wholesome, Guilt: S.lean.forgiving, Encouraged: S.lean.encouraging, Desperate: S.lean.cold + S.lean.jealous };
+  showOverlay(`<h2>🌙 End of Day 1</h2><p><i>"${esc(S.reflection)}"</i></p>
+    <table class="sum">${S.shifts.map(s => `<tr><td>${s.late ? 'Late' : 'Afternoon'} shift (${s.diff})</td><td colspan="2">${yen(s.total)}</td></tr>`).join('')}
+    <tr><td>Earned</td><td colspan="2" class="good">${yen(S.earned)}</td></tr><tr><td>Spent</td><td colspan="2" class="bad">${yen(S.spent)}</td></tr>
+    <tr><td>Trip fund</td><td colspan="2"><b>${yen(S.money)}</b> / ${yen(C.tripTarget)}</td></tr></table>
+    <h3 style="margin:10px 0 2px">Meters</h3><table class="sum">${['L', 'I', 'E', 'N'].map(row).join('')}</table>
+    <p>Route at CP1: <b>${S.route}</b>${S.routeEval !== S.route ? ` <span class="bad">(drifting toward ${S.routeEval}; you'll get a warning on Day 2)</span>` : ''}</p>
+    <p class="muted" style="font-size:13px">Lean: Naive ${lean.Naive} · Guilt ${lean.Guilt} · Encouraged ${lean.Encouraged} · Desperate ${lean.Desperate} · Protective 🛡️ ${S.lean.protective} (no route weight)</p>
+    <p class="muted">Day 2 isn't built yet.</p>
+    <div class="row"><button class="primary" id="again">Play Day 1 again</button></div>`);
+  $('again').onclick = () => { localStorage.removeItem(SAVE_KEY); S = newState(); outbox = []; world = null; hideOverlay(); toMorning(); };
+}
+function showOverlay(html) { ocard.innerHTML = html; ov.style.display = 'flex'; }
+function hideOverlay() { ov.style.display = 'none'; }
+
+/* ---------- controls ---------- */
+function renderControls() {
+  if (!S) return;
+  const inShift = S.slot === 'shift' && world && !world.done;
+  $('pad').style.display = inShift ? 'block' : 'none';
+  $('actBtn').style.display = inShift ? 'block' : 'none';
+  $('phoneBtn').style.display = (inShift || (S.slot !== 'title' && S.slot !== 'summary' && S.slot !== 'shift_select')) ? 'block' : 'none';
+  if (inShift) { ctrl.innerHTML = ''; return; }
+  if (S.slot === 'morning' || S.slot === 'evening') ctrl.innerHTML = `<button class="primary" data-a="phone">📱 Open phone</button>`;
+  else ctrl.innerHTML = '';
+}
+ctrl.addEventListener('click', e => { const t = e.target.closest('[data-a]'); if (t) slotAction(t.dataset.a); });
+function updateActBtn() {
+  if (!world || world.done) return; const p = world.p, b = $('actBtn');
+  const lbl = p.handover > 0 ? 'HANDING OVER' : p.onFoot ? (Math.hypot(p.x - p.bx, p.y - p.by) < 40 ? 'GET ON BIKE' : 'WALK…') : p.speed >= 5 ? 'STOP' : 'GET OFF';
+  if (b.textContent !== lbl) { b.textContent = lbl; b.style.background = lbl === 'STOP' ? '#c0392b' : lbl === 'GET OFF' ? '#2e86de' : '#27ae60'; }
+}
+$('actBtn').addEventListener('pointerdown', e => { e.preventDefault(); action(); });
+$('phoneBtn').addEventListener('click', () => { S.phone.open ? closePhone() : openPhone(); });
+const pad = $('pad'), knob = $('knob');
+function padMove(e) {
+  const r = pad.getBoundingClientRect(), dx = e.clientX - (r.left + r.width / 2), dy = e.clientY - (r.top + r.height / 2);
+  const max = r.width / 2, d = Math.hypot(dx, dy), k = d > max ? max / d : 1;
+  joy.x = dx * k / max; joy.y = dy * k / max; if (Math.hypot(joy.x, joy.y) < 0.15) joy.x = joy.y = 0;
+  knob.style.transform = `translate(${dx * k}px,${dy * k}px)`;
+}
+pad.addEventListener('pointerdown', e => { e.preventDefault(); pad.setPointerCapture(e.pointerId); joy.on = true; padMove(e); });
+pad.addEventListener('pointermove', e => { if (joy.on) padMove(e); });
+const padEnd = () => { joy.on = false; joy.x = joy.y = 0; knob.style.transform = ''; };
+pad.addEventListener('pointerup', padEnd); pad.addEventListener('pointercancel', padEnd);
+document.addEventListener('touchmove', e => { if (!e.target.closest('.pscroll,.choices,.card,#debug')) e.preventDefault(); }, { passive: false });
+document.addEventListener('gesturestart', e => e.preventDefault());
+document.addEventListener('dblclick', e => e.preventDefault());
+window.addEventListener('keydown', e => {
+  const k = e.key.length === 1 ? e.key.toLowerCase() : e.key; keys[k] = true;
+  if (k === '`' || k === 'F2') { toggleDebug(); e.preventDefault(); }
+  else if (k === 'p' || k === 'Tab') { if (S && S.slot !== 'title') { S.phone.open ? closePhone() : openPhone(); } e.preventDefault(); }
+  else if (k === 'e' || k === ' ') { action(); e.preventDefault(); }
+  else if (k === 'Escape') { paused = !paused; if (paused) showOverlay('<h2>⏸ Paused</h2><p class="muted">The world and timers are frozen. Press Esc or tap to resume.</p><button class="primary" id="unp" style="width:100%">Resume</button>'), $('unp').onclick = () => { paused = false; hideOverlay(); renderPhone(true); }; else hideOverlay(); renderPhone(true); }
+  if (k.startsWith('Arrow')) e.preventDefault();
+});
+window.addEventListener('keyup', e => { keys[e.key.length === 1 ? e.key.toLowerCase() : e.key] = false; });
+
+/* ---------- debug ---------- */
+let debugOn = false;
+function toggleDebug() { debugOn = !debugOn; $('debug').style.display = debugOn ? 'block' : 'none'; renderDebug(); }
+$('debugBtn').onclick = toggleDebug;
+function renderDebug() {
+  if (!debugOn || !S) return;
+  const m = S.meters, bar = (k, c) => `${k} ${m[k]} <span style="color:#888">(start ${S.startMeters[k]}, ${m[k] - S.startMeters[k] >= 0 ? '+' : ''}${m[k] - S.startMeters[k]})</span><div class="bar"><div style="width:${m[k]}%;background:${c}"></div></div>`;
+  const p = S.pending;
+  $('debug').innerHTML = `<b>DEBUG</b> · ${S.slot} · ${fmtClock(S.clock)} · safe:${isSafe()}<br>
+    ${bar('L', '#f7a1c4')}${bar('I', '#a7c7ff')}${bar('E', '#ffb36b')}${bar('N', '#999')}
+    route_now: <b>${S.route}</b> · rules say: <b>${evalRoute()}</b> · desp_cause: ${despCause()}<br>
+    lean → Naive ${S.lean.wholesome} · Guilt ${S.lean.forgiving} · Enc ${S.lean.encouraging} · Desp ${S.lean.cold + S.lean.jealous} (cold ${S.lean.cold}/jealous ${S.lean.jealous}) · 🛡️ ${S.lean.protective} (no weight)<br>
+    money ${yen(S.money)} · earned ${yen(S.earned)} · spent ${yen(S.spent)}<br>
+    pending key: ${p ? `${p.beat} ${p.fired ? 'shown' : 'waiting for a stop'} · wait ${((S.clock - p.readyAt) / 60).toFixed(1)}m · steps ${p.steps}` : '—'}<br>
+    queued keys: ${S.keyQueue.join(', ') || '—'} · open minors: ${S.minors.map(x => x.beat + (x.deadline ? '(' + Math.ceil((x.deadline - S.clock) / 60) + 'm)' : '')).join(', ') || '—'}<br>
+    flags: ${esc(JSON.stringify(S.flags))}<br>
+    <button id="dbgSkip">+10 game min</button> <button id="dbgReset">Reset save</button>
+    <div style="margin-top:6px;color:#aaa">${S.log.slice(-12).reverse().map(esc).join('<br>')}</div>`;
+  $('dbgSkip').onclick = () => { S.clock += 600; if (S.q && S.q.nextAt) S.q.nextAt -= 0; };
+  $('dbgReset').onclick = () => { localStorage.removeItem(SAVE_KEY); location.reload(); };
+}
+
+/* ---------- title ---------- */
+function title() {
+  S = S || newState();
+  const saved = load();
+  showOverlay(`<h2>Last Train Home</h2><p class="muted">Day 1 · Move-in. Yui's moving to Tokyo for uni. You're staying in Minase, doing HayaEats deliveries to save ${yen(C.tripTarget)} so you can visit her.</p>
+    <p class="muted" style="font-size:13px">Personal prototype. Placeholder art. Progress saves on this device.</p>
+    <p class="muted" style="font-size:11px;opacity:.7" id="buildStamp">2026-10-16 07:14 BST · day1 web</p>
+    <div class="diff">${saved && saved.slot !== 'title' ? '<button class="primary" id="cont">Continue</button>' : ''}<button ${saved && saved.slot !== 'title' ? '' : 'class="primary"'} id="newg">New game</button></div>`);
+  if ($('cont')) $('cont').onclick = () => { S = saved; resume(); };
+  $('newg').onclick = () => { localStorage.removeItem(SAVE_KEY); S = newState(); hideOverlay(); toMorning(); };
+}
+function resume() {
+  hideOverlay();
+  if (S.slot === 'shift' || S.slot === 'shift_select') { S.slot = 'shift_select'; S.q = null; toShiftSelect(false); return; } // a shift restarts on reload
+  if (S.slot === 'summary') { showSummary(); renderControls(); return; }
+  renderPhone(true); renderControls();
+}
+
+/* ---------- main loop ---------- */
+function frame(t) {
+  const dt = Math.min(0.05, (t - lastT) / 1000); lastT = t;
+  if (S && !paused && ov.style.display !== 'flex') {
+    if (S.slot === 'morning' || S.slot === 'evening') S.clock += dt * C.gameSecondsPerRealSecond;
+    if (S.slot === 'shift') tickShift(dt);
+    if (S.slot === 'morning' || S.slot === 'evening' || S.slot === 'shift') { tickQueue(); tickTimers(); }
+  }
+  if (S && S.slot === 'evening' && S.q && S.q.slot === 'evening') S.eveningQ = S.q;
+  const now = performance.now();
+  if (outbox.length && outbox[0]) { const due = outbox.filter(o => o.due <= now); if (due.length) { outbox = outbox.filter(o => o.due > now); due.forEach(o => pushMsg(o.msg)); } }
+  if (world) updateActBtn();
+  draw();
+  uiTimer += dt; if (uiTimer > 0.25) { uiTimer = 0; renderPhone(); renderDebug(); }
+  saveTimer += dt; if (saveTimer > 3) { saveTimer = 0; if (S && S.slot !== 'title') save(); }
+  requestAnimationFrame(frame);
+}
+window.addEventListener('resize', resize);
+window.__game = { get S() { return S; }, get world() { return world; }, answer, action, startShift, sleep, toShiftSelect, keys, joy };
+resize(); title(); requestAnimationFrame(frame);
+})();
+
+</script>
+</body>
+</html>
