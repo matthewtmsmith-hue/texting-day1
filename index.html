@@ -7,7 +7,7 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="robots" content="noindex,nofollow">
-<meta name="tg-build" content="2026-10-16 12:12 BST · day1 web">
+<meta name="tg-build" content="2026-10-16 12:19 BST · day1 web">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <link rel="icon" href="data:,">
 <meta name="theme-color" content="#0d0f14">
@@ -447,6 +447,21 @@ window.ENDINGS = {
   Naive: { A: "The Lesson", B: "Office Hours" }, Desperate: { A: "Read, No Reply", B: "Third Wheel" },
   Guilt: { A: "Evidence", B: "Locked Out" }, Encouraged: { A: "Breakfast for Three", B: "Delivery Boy" }
 };
+// Sound: the Loop Guard mp4s have NO audio track. Like Loop Guard (js/audio.js + CLIP_SFX), each scene gets a
+// looped sfx bed from sfx/, played alongside the muted video and stopped on every clip exit.
+window.CLIP_SFX = {
+  SCENE_JAKE_TVRACK_STANDING_1: "light_panting.mp3", SCENE_JAKE_SHOWER_LEAN_1: "light_panting.mp3",
+  SCENE_ROBERT_WORKAREA_SITTING_1: "slow_thrusts.mp3", SCENE_ROBERT_WORKAREA_BJ_1: "light_sucking.mp3",
+  SCENE_BOSS_WORKAREA_SPOON_1: "slow_thrusts.mp3", SCENE_BOSS_WORKAREA_RIDE_1: "light_thrusting.mp3",
+  SCENE_JAKE_COWGIRL_1: "light_thrusting.mp3", SCENE_JAKE_TVRACK_BOUNCE_1: "faster_thrusts.mp3",
+  SCENE_BOSS_FINAL_SUCK_1: "deeper_suck.mp3",
+  SCENE_ROBERT_ELECTRICAL_COWGIRL_BOUNCE_1: "faster_thrusts.mp3", SCENE_BOSS_OFFICE_RD_DOGGY_1: "faster_thrusts_2.mp3",
+  SCENE_ROBERT_WORKAREA_DOGGY_BEND_1: "faster_thrusts.mp3", SCENE_BOSS_LOCKER_BATHROOM_RIDE_1: "faster_thrusts_2.mp3",
+  SCENE_JAKE_FINAL_MISSIONARY_1: "heavy_panting.mp3", SCENE_ROBERT_FINAL_DOGGY_1: "faster_thrusts_2.mp3",
+  SCENE_BOSS_LOCKER_MATEPRESS_1: "faster_thrusts_2.mp3", SCENE_BOSS_FINAL_COWGIRL_1: "heavy_panting.mp3",
+  SCENE_ROBERT_FINAL_MISSIONARY_1: "heavy_panting.mp3", SCENE_JAKE_FINAL_REV_DOGGY_1: "faster_thrusts.mp3",
+  SCENE_BOSS_LOCKER_MISSIONARY_1: "faster_thrusts.mp3", SCENE_JAKE_FINAL_DOGGY_1: "faster_thrusts_2.mp3"
+};
 
 </script>
 <script>
@@ -505,6 +520,14 @@ window.DAYS[1] = {
         lines: [ "The futon feels too big tonight, which is stupid. She was never here every night anyway." ] }
     ]
   },
+  // customers[]: delivery customer lines, one picked per handover (trigger: handover, bible 15.4). Needs an engine hook.
+  customers: [
+    "oh, you're quick! thank you",
+    "is it still hot? great. have a good one",
+    "you're Michiko's boy, aren't you? tell your mother I said hello",
+    "just leave it on the step, the baby's finally asleep",
+    "thanks. HayaEats in Minase, who'd have thought"
+  ],
   morning: { startClock: "07:10", endClock: "13:00", beats: [
     { id: "m01", from: "Mom", tier: "minor", delay: 1,
       text: "morning love. Yui goes to Tokyo today doesn't she? tell her good luck from me",
@@ -626,10 +649,791 @@ window.DAYS[1] = {
 };
 
 </script>
+<script>
+// Day 2 dialogue for "Last Train Home". Same data shape as game/day1/data/day1.js (window.DAYS[n]).
+// ASCII only; emoji icons are \u escapes.
+// ROUTE GATE (needs engine support, see README "Engine asks"): cond.route = "Naive"|"Desperate"|"Guilt"|"Encouraged"
+//   means "only fire when route_now is this route". It reuses the existing cond field; condOk() needs one extra test:
+//   if (c.route != null) t.push(S.route === c.route).  Beats with no cond.route are shared spine.
+// customers[]: delivery customer lines, one picked per handover (trigger: handover, bible 15.4). Needs a hook.
+// Clip beats use media.kind 'clip'; media.id is the slot id from README, caption is the overlay line (speech only).
+window.DAYS = window.DAYS || {};
+window.DAYS[2] = {
+  title: "Day 2 \u00b7 The cooking lesson",
+  apartment: {
+    start: { morning: "futon", evening: "genkan" },
+    chores: [
+      { id: "breakfast", spot: "stove", slots: ["morning"], label: "\u{1F373} Make breakfast", dur: 4, setFlag: "d2_breakfast", st: "plate",
+        options: [ { key: "toast", icon: "\u{1F35E}", line: "Toast again. You promise yourself you'll buy eggs." },
+                   { key: "natto", icon: "\u{1F35A}", line: "Rice and natto. Yui hates natto. You eat it a little faster because of that." },
+                   { key: "yoghurt", icon: "\u{1F95B}", line: "A yoghurt that's one day past its date. It tastes fine." } ] },
+      { id: "dinner", spot: "stove", slots: ["evening"], label: "\u{1F35C} Make dinner", dur: 5, setFlag: "d2_dinner", st: "plate",
+        options: [ { key: "omurice", icon: "\u{1F373}", line: "Omurice. You watched a video. The egg tears down the middle anyway." },
+                   { key: "ramen", icon: "\u{1F35C}", line: "Cup ramen. She's learning to cook in Tokyo and you're boiling a kettle." },
+                   { key: "gyoza", icon: "\u{1F95F}", line: "Frozen gyoza. Half of them stick to the pan." } ],
+        hook: { once: true, placeholder: false, beat: { id: "h_dinner2", from: "Yui", tier: "minor", text: "what did you have for dinner? I'm judging",
+          choicesByFlag: { flag: "d2_dinner",
+            omurice: [ { text: "omurice. it looked like a crime scene", reply: ["lol it still counts as cooking"] }, { text: "something, I ate", reply: ["vague. suspicious"] } ],
+            ramen: [ { text: "cup ramen, don't start", reply: ["I'm starting. sora."] }, { text: "something, I ate", reply: ["vague. suspicious"] } ],
+            gyoza: [ { text: "frozen gyoza, half of them died", reply: ["rip to the gyoza"] }, { text: "something, I ate", reply: ["vague. suspicious"] } ] } } } },
+      { id: "tv", spot: "tv", slots: ["morning", "evening"], label: "\u{1F4FA} Watch TV", dur: 5, icon: "\u{1F4FA}", st: "tv",
+        lines: [ "Morning news: the Matsumoto goat has been caught. He looks unbothered.",
+                 "A drama where a man waits at a station for a woman who never gets off the train. You turn it off.",
+                 "Weather: the typhoon south of Okinawa has a name now. It's heading north.",
+                 "A cooking show. The chef is teaching a student to hold the knife, standing very close behind her. You change the channel." ] },
+      { id: "shower", spot: "shower", slots: ["morning", "evening"], label: "\u{1F6BF} Shower", dur: 5, icon: "\u{1F6BF}", st: "steam",
+        lines: [ "You stand under the water until it goes lukewarm.", "You check your phone on the sink before you get in. Nothing yet." ] },
+      { id: "jacket", spot: "closet", slots: ["morning"], label: "\u{1F9E5} Put on HayaEats jacket", dur: 2, icon: "\u{1F9E5}", setFlag: "d2_dressed", st: "dressed",
+        lines: [ "The orange jacket still smells like yesterday's karaage orders." ] },
+      { id: "desk", spot: "desk", slots: ["morning", "evening"], label: "\u{1F4BB} Check the trip fund", dur: 2, icon: "\u{1F4BB}", lines: [ "You work out how many deliveries the ticket is. Then how many the weekend is. You stop working it out." ] },
+      { id: "door", spot: "genkan", slots: ["morning", "evening"], special: "door" },
+      { id: "bed", spot: "futon", slots: ["morning", "evening"], special: "bed",
+        lines: [ "You leave the phone face up on the pillow next to you, in case." ] }
+    ]
+  },
+  customers: [
+    "oh you're fast! thank you, keep the change",
+    "is this the karaage? my kid's been asking since noon",
+    "can you leave it by the door next time, the dog goes mad",
+    "you're the boy saving up for Tokyo, right? my granddaughter said. good luck",
+    "thanks. is it raining yet? they said a typhoon"
+  ],
+  morning: { startClock: "07:10", endClock: "13:00", beats: [
+    { id: "m01", from: "Yui", tier: "ambient", delay: 1, text: "good morning!! I slept like a rock, the vending machine light didn't even bother me" },
+    { id: "m02", from: "Mom", tier: "minor", delay: 2, text: "did Yui sleep ok in the new place?",
+      choices: [ { text: "yeah she sounds happy", reply: ["good. tell her Aunt Fumiko keeps sharing her photos lol"] },
+                 { text: "dunno yet", reply: ["ask her then!"] } ] },
+    { id: "m03", from: "Yui", tier: "key", pivotal: true, delay: 3,
+      text: "so Kenji's teaching me and Rika to cook this afternoon lol. he says I can't live on konbini forever",
+      choices: [
+        { type: "wholesome", text: "aw that's nice, learn me something and make it when I visit", reply: ["deal!! I'm going to make you the best curry of your life"] },
+        { type: "forgiving", text: "sounds fun. you don't have to check with me about stuff like that", reply: ["I know, I just like telling you things"] },
+        { type: "encouraging", text: "a private cooking lesson from the older guy. very cute", reply: ["it's not private lol Rika's there!! ...mostly"] },
+        { type: "protective", text: "he's really making himself part of your life fast. be a bit careful with him", reply: ["you're sweet. it's literally cooking though"] }
+      ],
+      pushback: { cold: { type: "cold", text: "ok", think: [8, 12], hesitate: true, reply: ["ok then"] },
+                  jealous: { type: "jealous", text: "why does he need to teach you anything. do it with Rika", reply: ["it IS with Rika?? he's her boyfriend"] } } },
+    // Route colour, morning. Only the current route's lines fire.
+    { id: "m04n", from: "Yui", tier: "ambient", delay: 2, cond: { route: "Naive" }, text: "he made us all onigiri for breakfast too. he's like a big brother lol" },
+    { id: "m04d", from: "Yui", tier: "ambient", delay: 2, cond: { route: "Desperate" }, text: "you didn't say goodnight btw" },
+    { id: "m05d", from: "Yui", tier: "ambient", delay: 2, cond: { route: "Desperate" }, text: "miss you so much it hurts",
+      media: { id: "desperate_P02", kind: "photo", caption: "Pouting \"miss you\" selfie" } },
+    { id: "m04g", from: "Yui", tier: "ambient", delay: 2, cond: { route: "Guilt" }, text: "sorry if I was a bit much last night. first night nerves" },
+    { id: "m05g", from: "Mei", tier: "minor", delay: 3, cond: { route: "Guilt" }, text: "hey sora, has Yui said anything about her flatmate's boyfriend? she was being weird on the phone",
+      choices: [ { text: "just that he helped her move. why?", reply: ["no reason. she said his name a lot lol"] },
+                 { text: "she's fine, she's just nervous", reply: ["yeah probably"] } ] },
+    { id: "m04e", from: "Yui", tier: "ambient", delay: 2, cond: { route: "Encouraged" }, text: "Rika keeps saying Kenji likes the new girl lol. she's joking. I think" },
+    { id: "m06", from: "Haruto", tier: "minor", delay: 4, text: "mixer tonight for her right? the shinkan-kai stuff. my sister said those get messy",
+      choices: [ { text: "it's just a welcome thing, she'll be fine", reply: ["yeah course"] },
+                 { text: "don't say that lol", reply: ["sorry man. I'm sure it's fine"] } ] },
+    { id: "m07", from: "Yui", tier: "key", delay: 3, text: "ok be honest. do I wear the sweater or the dress tonight. the dress is SHORT",
+      choices: [
+        { type: "wholesome", text: "the sweater, you look cute in it and you'll be warm", reply: ["sweater it is. you know me"], set: { d2_outfit: "sweater" } },
+        { type: "encouraging", text: "the short one obviously", reply: ["sora!! lol ok maybe for the next one"], set: { d2_outfit: "dress" } },
+        { type: "protective", text: "wear what you like, just stay near Rika, those parties get pushy", reply: ["I will, promise"] }
+      ] },
+    { id: "m08", from: "Yui", tier: "ambient", delay: 4, text: "going to class! first lecture is on Natsume Soseki, I'm so excited I could cry" }
+  ] },
+  shift: { startClock: "13:00", beats: [
+    { id: "s01", from: "Yui", tier: "ambient", at: 8, text: "lesson one: how to hold a knife. apparently I've been doing it wrong my whole life lol" },
+    { id: "s02n", from: "Yui", tier: "ambient", at: 22, cond: { route: "Naive" }, text: "look at me lol",
+      media: { id: "naive_P01", kind: "photo", caption: "Flour on her nose" } },
+    { id: "s02d", from: "Yui", tier: "ambient", at: 22, cond: { route: "Desperate" }, text: "guess you're working. Kenji says hi" },
+    { id: "s02g", from: "Yui", tier: "ambient", at: 22, cond: { route: "Guilt" }, text: "Rika had to go to her seminar so it's just me and Kenji finishing up. it's fine" },
+    { id: "s02e", from: "Yui", tier: "ambient", at: 22, cond: { route: "Encouraged" }, text: "he keeps standing behind me to fix my hands lol. is that a cooking thing or a him thing" },
+    { id: "s03", from: "Yui", tier: "minor", at: 40, text: "we made nikujaga!! it actually tastes like nikujaga",
+      choices: [ { text: "save me some", reply: ["it's 3 hours away, it'll be cold lol"] },
+                 { text: "proud of you", reply: ["thank you!!"] } ] },
+    { id: "s04", from: "Haruto", tier: "ambient", at: 60, text: "Ren just took the station order from right under you, I saw it on the map lol" },
+    { id: "s05", from: "Fumiko", channel: "insta", tier: "ambient", at: 75, cond: { route: "Naive" }, text: "Yui-chan is learning to cook in Tokyo!! so proud. such a kind senpai",
+      media: { id: "naive_P03", kind: "photo", caption: "Kenji feeding Yui a spoonful" } },
+    { id: "s05d", from: "Yui", channel: "insta", tier: "ambient", at: 75, cond: { route: "Desperate" }, text: "best week of my life",
+      media: { id: "desperate_P03", kind: "photo", caption: "\"Best week\" post" } },
+    { id: "s06", from: "Yui", tier: "minor", at: 95, text: "how's work going? are you winning",
+      choices: [ { text: "Ren's beating me but I'll get him", reply: ["get him!!"] },
+                 { text: "it's fine", reply: ["ok!"] } ] }
+  ] },
+  lateShift: { beats: [
+    { id: "l01", from: "Yui", tier: "minor", at: 10, text: "you're working tonight? I'm at the mixer anyway lol",
+      choices: [ { text: "yeah, trip money. have fun", reply: ["I will. text you later"] },
+                 { text: "yeah", reply: ["ok"] } ] },
+    { id: "l02", from: "HayaEats", tier: "ambient", at: 30, text: "Late shift: pay x0.6 tonight." }
+  ] },
+  evening: { startClock: "18:30", endClock: "23:30", secPerDelay: 7, beats: [
+    { id: "e01", from: "Yui", tier: "ambient", delay: 1, text: "how do I look? nervous lol",
+      media: { id: "all_P04", kind: "photo", caption: "Modest jeans-and-knit-sweater mirror selfie" } },
+    { id: "e02", from: "Yui", tier: "minor", delay: 2, text: "Rika's doing my eyeliner, pray for me",
+      choices: [ { text: "you look great already", reply: ["stop lol"] },
+                 { text: "have fun tonight", reply: ["I'll try!"] } ] },
+    { id: "e03d", from: "Takumi", tier: "ambient", delay: 2, cond: { route: "Desperate" }, text: "[new students group] whoever Yui is, you're the cutest one in here. not even close",
+      media: { id: "desperate_P04", kind: "photo", caption: "Takumi's selfie" } },
+    { id: "e04d", from: "Yui", tier: "key", delay: 2, cond: { route: "Desperate" }, text: "some rugby guy in the group chat called me cute lol. at least someone noticed",
+      choices: [
+        { type: "wholesome", text: "of course people notice, you're gorgeous. I notice", reply: ["...you could say it more you know"] },
+        { type: "cold", text: "ok", think: [8, 12], hesitate: true, reply: ["wow. ok"] },
+        { type: "jealous", text: "leave that group. now.", reply: ["it's the WHOLE year group sora"] },
+        { type: "protective", text: "rugby guys at mixers are the worst. stick with Rika", reply: ["at least HE'S paying attention to me"] }
+      ] },
+    { id: "e03g", from: "Yui", tier: "key", delay: 2, cond: { route: "Guilt" }, hesitate: true, text: "I feel bad going out tonight. is that weird. I feel like I'm doing something wrong",
+      choices: [
+        { type: "forgiving", text: "you're not doing anything wrong. go and have fun, don't beat yourself up", reply: ["ok. you're right. thank you"] },
+        { type: "wholesome", text: "it's normal to feel weird. text me when you get home and I'll be here", reply: ["I will. I love you"] },
+        { type: "protective", text: "if anyone makes you feel off, you leave. that's on them, not you", reply: ["you're right. I'll be careful, promise"] }
+      ] },
+    { id: "e03e", from: "Yui", tier: "key", delay: 2, cond: { route: "Encouraged" }, text: "ok so a guy at the mixer just asked for my LINE lol. do I give it to him",
+      choices: [
+        { type: "encouraging", text: "go for it, flirt a bit. you can tell me about it after", reply: ["wait you're serious?? ok lol. you're so weird. I'm doing it"] },
+        { type: "wholesome", text: "you can if you want, just as friends ok?", reply: ["just friends, promise"] },
+        { type: "protective", text: "careful, guys at these things think every girl is up for it", reply: ["lol since when do you care. ok ok"] }
+      ] },
+    { id: "e04n", from: "Yui", tier: "ambient", delay: 3, cond: { route: "Naive" }, text: "everyone at the mixer is so nice!! someone asked if Kenji was my boyfriend lol. I said no, he's my teacher" },
+    { id: "e05", from: "Rika", channel: "insta", tier: "ambient", delay: 3, cond: { route: "Naive" }, text: "close friends only lol",
+      media: { id: "naive_d2_clip01", kind: "clip", caption: "shh he's shy. no he isn't" } },
+    // soft_s01 (Kenji with Rika, his own girlfriend). Route frames it; see README clip beats.
+    { id: "e06n", from: "Yui", tier: "ambient", delay: 1, cond: { route: "Naive" }, text: "omg did Rika post that?? they're so cute together lol, I'm pretending I didn't see" },
+    { id: "e06d", from: "Airi", tier: "ambient", delay: 1, cond: { route: "Desperate" }, text: "ur gf's flatmate's bf is wild lol. she lives with THAT?",
+      media: { id: "desperate_d2_clip01", kind: "clip", caption: "Rika: \"stop, my flatmate's home\"" } },
+    { id: "e06g", from: "Mei", tier: "ambient", delay: 1, cond: { route: "Guilt" }, text: "is this the guy who drove her from the station? Rika posted it by accident I think",
+      media: { id: "guilt_d2_clip01", kind: "clip", caption: "Kenji: \"you're too loud, the new girl will hear\"" } },
+    { id: "e06e", from: "Yui", tier: "key", delay: 1, cond: { route: "Encouraged" }, text: "my flatmates are SO loud lol. jealous?",
+      media: { id: "encouraged_d2_clip01", kind: "clip", caption: "Rika: \"shh, she's literally next door\"" },
+      choices: [
+        { type: "encouraging", text: "of him? a bit. did you listen", reply: ["...maybe for a minute lol. don't tell Rika"] },
+        { type: "wholesome", text: "lol get some earplugs", reply: ["buying them tomorrow"] },
+        { type: "protective", text: "him filming that with you in the flat is a bit off", reply: ["Rika filmed it lol. relax"] }
+      ] },
+    { id: "e07", from: "Yui", tier: "key", delay: 3, hesitate: true, text: "back home. are you still up? call?",
+      choices: [
+        { type: "call_now", text: "calling now", call: true, reply: ["you sound tired lol. thank you for staying up"] },
+        { type: "call_later", text: "tomorrow? I'm about to pass out", reply: ["ok. tomorrow"] }
+      ] },
+    { id: "e08", from: "Yui", tier: "key", pivotal: true, delay: 3,
+      text: "Kenji walked us home from the mixer. he says the welcome party tomorrow is way bigger and he'll look after me",
+      choices: [
+        { type: "wholesome", text: "good, I'm glad someone walked you back. be safe tomorrow ok?", reply: ["I will. you're the best"] },
+        { type: "forgiving", text: "I trust you, go enjoy it. you don't have to explain", reply: ["thank you for not being weird. seriously"] },
+        { type: "encouraging", text: "look after you how exactly", reply: ["SORA lol. he means like, make sure I get home"] },
+        { type: "protective", text: "a guy with a girlfriend 'looking after' you at a party is a red flag", reply: ["you don't even know him lol. he's nice"] }
+      ],
+      pushback: { cold: { type: "cold", text: "ok night", think: [9, 14], hesitate: true, reply: ["night I guess"] },
+                  jealous: { type: "jealous", text: "you don't need him looking after you. you have me", reply: ["you're three hours away??"] } } },
+    { id: "e09", from: "Haruto", tier: "minor", delay: 3, text: "you good? you've been quiet",
+      choices: [ { text: "yeah just tired", reply: ["get some sleep then"] },
+                 { text: "she's busy, it's fine", reply: ["dude. call her tomorrow"] } ] },
+    { id: "e10", from: "Yui", tier: "minor", delay: 2, text: "night. I miss you",
+      choices: [ { text: "miss you more. night", reply: ["impossible"] },
+                 { text: "night", reply: ["night"] } ] }
+  ] }
+};
 
+</script>
+<script>
+// Day 3 dialogue: LIVE NIGHT (shinkan-kai). Same data shape as game/day1/data/day1.js.
+// ASCII only; emoji icons are \u escapes. cond.route = route gate (see day2.js header and README "Engine asks").
+// Evening = Live Night mode (bible 19.4). The Rush shift / Night off pick is engine UI, not dialogue.
+// Beats e06 to e09 sit at the pre-drinks -> izakaya transition and should be the ones that land during the rush run;
+// the "catch-up" beats after them replay what happened (bible 19.5). CP3 fires right after the kiss beats (e14*).
+// No late shift on live nights (bible 19.3), so lateShift is empty.
+// Flags the engine should set (ambient beats cannot set flags in this shape):
+//   kiss_shown_by = "yui" (Naive/Encouraged), "airi" (Desperate), "daichi" (Guilt), when the kiss media beat is opened.
+//   told_kiss_lie = true on Guilt at CP3 (set by choice below on e15g).
+window.DAYS = window.DAYS || {};
+window.DAYS[3] = {
+  title: "Day 3 \u00b7 Welcome party",
+  apartment: {
+    start: { morning: "futon", evening: "genkan" },
+    chores: [
+      { id: "breakfast", spot: "stove", slots: ["morning"], label: "\u{1F373} Make breakfast", dur: 4, setFlag: "d3_breakfast", st: "plate",
+        options: [ { key: "eggs", icon: "\u{1F373}", line: "Fried egg on rice. You bought eggs. Small wins." },
+                   { key: "toast", icon: "\u{1F35E}", line: "Toast. The eggs are for a special occasion now, apparently." },
+                   { key: "skip", icon: "\u2615", line: "Just coffee. You're not hungry and you don't want to think about why." } ] },
+      { id: "dinner", spot: "stove", slots: ["evening"], label: "\u{1F35C} Make dinner", dur: 5, setFlag: "d3_dinner", st: "plate",
+        options: [ { key: "konbini", icon: "\u{1F371}", line: "Konbini karaage, eaten over the sink with your phone propped on the tap." },
+                   { key: "ramen", icon: "\u{1F35C}", line: "Cup ramen. You forget it while you're reading and it goes soft." } ] },
+      { id: "tv", spot: "tv", slots: ["morning", "evening"], label: "\u{1F4FA} Watch TV", dur: 5, icon: "\u{1F4FA}", st: "tv",
+        lines: [ "Weather: Typhoon No. 14 will reach the Kanto area tonight. JR East warns of suspensions.",
+                 "News footage of Tokyo commuters with inside-out umbrellas. You look for her in the crowd like an idiot.",
+                 "A late-night show about university circles. \"The welcome parties are where it all starts!\" says the host." ] },
+      { id: "shower", spot: "shower", slots: ["morning", "evening"], label: "\u{1F6BF} Shower", dur: 5, icon: "\u{1F6BF}", st: "steam",
+        lines: [ "You take the phone into the bathroom. You tell yourself it's for music.", "Hot water. You keep picturing a crowded izakaya." ] },
+      { id: "jacket", spot: "closet", slots: ["morning"], label: "\u{1F9E5} Put on HayaEats jacket", dur: 2, icon: "\u{1F9E5}", setFlag: "d3_dressed", st: "dressed",
+        lines: [ "Jacket on. Surge pay tonight if you want it." ] },
+      { id: "door", spot: "genkan", slots: ["morning", "evening"], special: "door" },
+      { id: "bed", spot: "futon", slots: ["morning", "evening"], special: "bed",
+        lines: [ "You lie there listening to rain that isn't falling here. It's falling on her." ] }
+    ]
+  },
+  customers: [
+    "surge pricing for a gyudon, unbelievable. not your fault, thanks",
+    "you look like you haven't slept, kid",
+    "is that your girlfriend on your lock screen? cute. Tokyo? ah. good luck",
+    "thanks! oh, Ren from HayaEats said you're slow. you're not slow",
+    "the typhoon's hitting Tokyo tonight, isn't it. glad we're out here"
+  ],
+  morning: { startClock: "07:10", endClock: "13:00", beats: [
+    { id: "m01", from: "Yui", tier: "ambient", delay: 1, text: "WELCOME PARTY TONIGHT. I am so nervous I could throw up lol" },
+    { id: "m02", from: "Mom", tier: "minor", delay: 2, text: "there's a typhoon going towards Tokyo, tell Yui to be careful tonight",
+      choices: [ { text: "I'll tell her", reply: ["good boy"] }, { text: "she'll be fine", reply: ["tell her anyway"] } ] },
+    { id: "m03", from: "Yui", tier: "key", delay: 3, text: "pre-drinks at ours, then izakaya, then karaoke, then apparently an after-party at Kenji's share house lol",
+      choices: [
+        { type: "wholesome", text: "busy night! eat something before you drink, and text me when you're home ok?", reply: ["I will!! I'll eat SO much"] },
+        { type: "encouraging", text: "a whole night out, go wild", reply: ["lol not too wild. maybe a bit wild"] },
+        { type: "protective", text: "an after-party at Kenji's place feels a bit much. stay with the girls", reply: ["Rika's going too, it's fine"] }
+      ] },
+    { id: "m04", from: "Haruto", tier: "minor", delay: 3, text: "rush shift tonight? surge pay. I'm in if you are",
+      choices: [ { text: "maybe, depends on her", reply: ["dude she'll be at a party lol, just ride"] },
+                 { text: "yeah I'm in", reply: ["let's take Ren's lunch money"] } ] },
+    { id: "m05", from: "Yui", tier: "key", pivotal: true, delay: 3,
+      text: "Rika says Kenji's coming to the izakaya too, to 'keep an eye on us first years' lol",
+      choices: [
+        { type: "wholesome", text: "good, it's nice someone's looking out. have fun and be safe", reply: ["I will!! love you"] },
+        { type: "forgiving", text: "it's fine, whatever happens tonight, I trust you", reply: ["what do you mean whatever happens lol. but thank you"] },
+        { type: "encouraging", text: "an eye on you specifically I bet", reply: ["SORA. lol. ...maybe"] },
+        { type: "protective", text: "he's keeping an eye on you because he wants you. don't trust him", reply: ["you've never even met him lol"] }
+      ],
+      pushback: { cold: { type: "cold", text: "ok", think: [8, 12], hesitate: true, reply: ["you're very chatty today"] },
+                  jealous: { type: "jealous", text: "tell him not to come or I'm not ok with you going", reply: ["I can't tell Rika's boyfriend not to come??"] } } },
+    { id: "m06", from: "Yui", tier: "ambient", delay: 4, text: "trying on outfits, don't look at the state of my room" },
+    { id: "m07", from: "Yui", tier: "ambient", delay: 3, text: "ok off to class, the lecturer is ancient and I love him" }
+  ] },
+  shift: { startClock: "13:00", beats: [
+    { id: "s01", from: "Yui", tier: "ambient", at: 10, text: "the sky here is going a really weird colour" },
+    { id: "s02", from: "HayaEats", tier: "ambient", at: 20, text: "Typhoon alert for Kanto. Minase: clear. Ride safe!" },
+    { id: "s03", from: "Yui", tier: "minor", at: 40, text: "did you eat?",
+      choices: [ { text: "onigiri between orders", reply: ["acceptable"] }, { text: "not yet", reply: ["sora!!"] } ] },
+    { id: "s04", from: "Haruto", tier: "ambient", at: 60, text: "Ren crashed into a vending machine lol he's fine. the vending machine isn't" },
+    { id: "s05", from: "Yui", tier: "ambient", at: 85, text: "Rika is doing my makeup and she's very serious about it" }
+  ] },
+  lateShift: { beats: [] },
+  evening: { startClock: "18:30", endClock: "23:30", secPerDelay: 7, beats: [
+    { id: "e01", from: "Yui", tier: "ambient", delay: 1, text: "pre-drinks!! Rika made chuhai in a bowl lol" },
+    // MM01: the dress she actually wore.
+    { id: "e02n", from: "SeiranWine", channel: "insta", tier: "ambient", delay: 2, cond: { route: "Naive" }, text: "first years looking ready for the welcome party!",
+      media: { id: "all_P05", kind: "photo", caption: "Tiny sparkly dress, club light" } },
+    { id: "e02d", from: "Airi", channel: "insta", tier: "ambient", delay: 2, cond: { route: "Desperate" }, text: "my girl Yui came to PLAY tonight",
+      media: { id: "all_P05", kind: "photo", caption: "Tiny sparkly dress, club light" } },
+    { id: "e02g", from: "Daichi", channel: "insta", tier: "ambient", delay: 2, cond: { route: "Guilt" }, text: "the first years are here and Kenji's already found his favourite",
+      media: { id: "all_P05", kind: "photo", caption: "Tiny sparkly dress, club light" } },
+    { id: "e02e", from: "Yui", tier: "ambient", delay: 2, cond: { route: "Encouraged" }, text: "ok I didn't wear the sweater. too much?",
+      media: { id: "all_P05", kind: "photo", caption: "Tiny sparkly dress, club light" } },
+    { id: "e03d", from: "Yui", tier: "ambient", delay: 2, cond: { route: "Desperate" }, text: "girls night!",
+      media: { id: "desperate_P05", kind: "photo", caption: "Three girls" } },
+    { id: "e04d", from: "Rika", channel: "insta", tier: "ambient", delay: 2, cond: { route: "Desperate" }, text: "the izakaya is PACKED",
+      media: { id: "desperate_P06", kind: "photo", caption: "Wide shot, his hand on her waist" } },
+    // Pivotal 1, by route.
+    { id: "e05n", from: "Yui", tier: "key", pivotal: true, delay: 2, cond: { route: "Naive" },
+      text: "we're at the wine circle's party!! Kenji says I have a good palate lol. he's teaching me how to taste properly",
+      choices: [
+        { type: "wholesome", text: "look at you, a wine expert already. drink some water too ok?", reply: ["yes sir lol. water between every glass"] },
+        { type: "forgiving", text: "have fun, you deserve a good night", reply: ["you're the best boyfriend ever"] },
+        { type: "encouraging", text: "taste properly how lol", reply: ["you swirl it and you sniff it and you go 'mm' lol. it's very serious"] },
+        { type: "protective", text: "he's getting you drunk and calling it a lesson. be careful", reply: ["it's like three tiny glasses lol. he's just nice"] }
+      ],
+      pushback: { cold: { type: "cold", text: "cool", think: [8, 12], reply: ["you ok?"] },
+                  jealous: { type: "jealous", text: "stop drinking with him", reply: ["it's a WINE circle??"] } } },
+    { id: "e05d", from: "Yui", tier: "key", pivotal: true, delay: 2, cond: { route: "Desperate" }, hesitate: true,
+      text: "that rugby guy Takumi has been buying me drinks all night. you haven't even asked how it's going",
+      choices: [
+        { type: "wholesome", text: "I'm sorry. how's it going? are you having a good time?", reply: ["...yeah. it's fun. thank you for asking"] },
+        { type: "forgiving", text: "it's ok, enjoy yourself. you don't have to check in", reply: ["right. I don't have to. ok"] },
+        { type: "encouraging", text: "let him then, free drinks", reply: ["fine maybe I will. ...wait, you'd actually be ok with that?"] },
+        { type: "protective", text: "guys buying you drinks all night want something back. careful", reply: ["at least someone wants something from me"] }
+      ],
+      pushback: { cold: { type: "cold", text: "busy", think: [10, 14], hesitate: true, reply: ["obviously"] },
+                  jealous: { type: "jealous", text: "send me your location right now", reply: ["you don't trust me so why should I bother"] } } },
+    { id: "e05g", from: "Yui", tier: "key", pivotal: true, delay: 2, cond: { route: "Guilt" },
+      text: "Kenji keeps sitting next to me. I moved twice lol. it's fine, I'm just telling you",
+      choices: [
+        { type: "forgiving", text: "it's fine, I believe you. you don't have to report everything", reply: ["thank you. I just want you to know I'm being good"] },
+        { type: "wholesome", text: "thanks for telling me. go sit with Rika and have fun", reply: ["I will"] },
+        { type: "encouraging", text: "he likes you lol. let him", reply: ["don't say that. ...is that bad that I don't hate it"] },
+        { type: "protective", text: "he knows you moved and he keeps doing it. that's not ok of him", reply: ["you're right. I'll be careful. promise"] }
+      ],
+      pushback: { cold: { type: "cold", text: "ok", think: [8, 12], reply: ["ok"] },
+                  jealous: { type: "jealous", text: "go home. now.", reply: ["I can't just leave??"] } } },
+    { id: "e05e", from: "Yui", tier: "key", pivotal: true, delay: 2, cond: { route: "Encouraged" },
+      text: "ok so Kenji's flirting with me. like actually. is that still ok? you said it was",
+      choices: [
+        { type: "encouraging", text: "it's ok. flirt back a bit and tell me what he says", reply: ["omg ok. he said my dress should be illegal lol"] },
+        { type: "wholesome", text: "flirting's fine, just look after yourself", reply: ["I will. thank you"] },
+        { type: "forgiving", text: "whatever you do, I'm not going to be mad", reply: ["you're not?? ok"] },
+        { type: "protective", text: "he's got a girlfriend sitting right there. that says a lot about him", reply: ["lol since when do you care? thought you liked this"] }
+      ],
+      pushback: { cold: { type: "cold", text: "sure", think: [8, 12], reply: ["you said it was ok..."] },
+                  jealous: { type: "jealous", text: "no. stop it now", reply: ["you literally told me to have fun??"] } } },
+    { id: "e06", from: "Haruto", tier: "minor", delay: 2, text: "surge's live, three orders at the station. where are you",
+      choices: [ { text: "on my way", reply: ["go go go"] }, { text: "sitting this one out", reply: ["your loss man"] } ] },
+    { id: "e07", from: "Yui", tier: "ambient", delay: 2, text: "karaoke!!! I'm singing YOASOBI badly" },
+    { id: "e08n", from: "Yui", tier: "ambient", delay: 2, cond: { route: "Naive" }, text: "Kenji did a duet with me lol, everyone cheered" },
+    { id: "e08d", from: "Airi", channel: "insta", tier: "ambient", delay: 2, cond: { route: "Desperate" }, text: "Takumi lost his shot. Kenji just walked in lol" },
+    { id: "e08g", from: "Yui", tier: "ambient", delay: 2, cond: { route: "Guilt" }, text: "my phone's nearly dead so if I go quiet that's why" },
+    { id: "e08e", from: "Yui", tier: "ambient", delay: 2, cond: { route: "Encouraged" }, text: "he held my hand under the table. I'm telling you because you said tell you" },
+    { id: "e09", from: "HayaEats", tier: "ambient", delay: 2, text: "Rush complete. Surge x1.2 applied." },
+    { id: "e10", from: "Yui", tier: "ambient", delay: 2, text: "the trains just stopped?? because of the typhoon??",
+      media: { id: "all_P09", kind: "photo", caption: "Rain-lashed station, departure board showing service suspended" } },
+    { id: "e11", from: "Yui", tier: "key", delay: 2, text: "everyone's going to the after-party at Sakuragaoka, it's walking distance. I can't get home anyway",
+      choices: [
+        { type: "wholesome", text: "go with Rika, stay together, and text me when you're inside", reply: ["I will. it's so windy"] },
+        { type: "forgiving", text: "makes sense, go. don't worry about me", reply: ["thank you for understanding"] },
+        { type: "encouraging", text: "an after-party at his place. go have fun", reply: ["lol you would say that"] },
+        { type: "protective", text: "is there really no taxi? I don't love you stuck at his place", reply: ["the taxis are all gone, I checked. it's fine"] }
+      ] },
+    { id: "e12n", from: "Yui", tier: "ambient", delay: 2, cond: { route: "Naive" }, text: "in bed! night babe",
+      media: { id: "naive_P04", kind: "photo", caption: "In bed in pyjamas, 11pm" } },
+    { id: "e12d", from: "Yui", tier: "ambient", delay: 2, cond: { route: "Desperate" }, text: "going to bed. night",
+      media: { id: "desperate_P07", kind: "photo", caption: "In bed (reuses naive_P04)" } },
+    { id: "e12g", from: "Yui", tier: "ambient", delay: 2, cond: { route: "Guilt" }, text: "crashing at a girl's from my seminar tonight, she lives near the station" },
+    // The kiss. Pivotal 2 per route. CP3 fires after this.
+    { id: "e13n", from: "Yui", tier: "key", pivotal: true, delay: 4, cond: { route: "Naive" },
+      text: "lol so Kenji kissed me. he said it's a French greeting, they do it at the wine circle",
+      media: { id: "all_P08", kind: "photo", caption: "Kiss with Kenji at the after-party" },
+      choices: [
+        { type: "wholesome", text: "lol ok. maybe stick to the Japanese greeting next time", reply: ["lol ok ok. bow only from now on"] },
+        { type: "forgiving", text: "it's fine, I know it didn't mean anything", reply: ["it didn't!! you're so chill, I love you"] },
+        { type: "encouraging", text: "a French greeting. did you greet him back", reply: ["...a bit lol. is that bad?? you're laughing right?"] },
+        { type: "protective", text: "that's not a greeting, Yui. he's using you being new", reply: ["you're overthinking it, everyone does it here"] }
+      ],
+      pushback: { cold: { type: "cold", text: "ok", think: [10, 15], hesitate: true, reply: ["are you mad?"] },
+                  jealous: { type: "jealous", text: "block him. tonight.", reply: ["I'm IN HIS HOUSE sora"] } } },
+    { id: "e13d", from: "Airi", channel: "insta", tier: "ambient", delay: 4, cond: { route: "Desperate" }, text: "afterparty gets SPICY",
+      media: { id: "desperate_d3_clip01", kind: "clip", caption: "Airi, off camera: \"oh my god, Yui!\"" } },
+    { id: "e14d", from: "Haruto", tier: "key", pivotal: true, delay: 2, cond: { route: "Desperate" },
+      text: "dude. Airi just posted this. isn't that Yui?? who is that guy",
+      choices: [
+        { type: "wholesome", text: "I'm going to call her. thanks for telling me", reply: ["yeah man. call her"] },
+        { type: "forgiving", text: "she's drunk, it's a party. it's not a big deal", reply: ["dude you believe everything she does"] },
+        { type: "encouraging", text: "honestly? I kind of don't mind", reply: ["bro WHAT"] },
+        { type: "protective", text: "that's Kenji. he's been working on her since day one", reply: ["then tell her that, not me"] }
+      ],
+      pushback: { cold: { type: "cold", text: "not my problem anymore", think: [10, 15], reply: ["you don't mean that"] },
+                  jealous: { type: "jealous", text: "I'm going to make her block him", reply: ["dude... that'll go great"] } } },
+    { id: "e15d", from: "Yui", tier: "ambient", delay: 3, cond: { route: "Desperate" }, text: "club after the party. don't wait up",
+      media: { id: "desperate_P08", kind: "photo", caption: "Club at 1am" } },
+    { id: "e13g", from: "Daichi", channel: "insta", tier: "ambient", delay: 4, cond: { route: "Guilt" }, text: "the new girl doesn't waste time",
+      media: { id: "guilt_P02", kind: "photo", caption: "Daichi's story: her pulling Kenji in" } },
+    { id: "e14g", from: "Yui", channel: "insta", tier: "ambient", delay: 2, cond: { route: "Guilt" }, text: "stuck lol",
+      media: { id: "guilt_P03", kind: "photo", caption: "Location-sticker story, Sakuragaoka" } },
+    { id: "e15g", from: "Yui", tier: "key", pivotal: true, delay: 3, cond: { route: "Guilt" }, hesitate: true,
+      text: "are you awake. something happened and I need you to not be mad. he kissed me. I didn't want it",
+      choices: [
+        { type: "forgiving", text: "hey. I believe you. it's not your fault, don't beat yourself up", reply: ["thank you. thank you. I love you so much"], set: { told_kiss_lie: true } },
+        { type: "wholesome", text: "are you safe right now? can you go and sleep in Rika's room?", reply: ["yes. I'm ok. I'll go to Rika"], set: { told_kiss_lie: true } },
+        { type: "encouraging", text: "you didn't want it at all?", reply: ["...why would you ask that"], set: { told_kiss_lie: true } },
+        { type: "protective", text: "then that's on him, not you. stay away from him", reply: ["you're right. I will. I promise"], set: { told_kiss_lie: true } }
+      ],
+      pushback: { cold: { type: "cold", text: "ok", think: [12, 16], hesitate: true, reply: ["that's all you're going to say?"] },
+                  jealous: { type: "jealous", text: "you're at his house. what did you think would happen", reply: ["I didn't ASK for it sora"] } } },
+    { id: "e16g", from: "Daichi", channel: "insta", tier: "ambient", delay: 3, cond: { route: "Guilt" }, text: "couch is taken lol",
+      media: { id: "guilt_d3_clip01", kind: "clip", caption: "Yui, laughing: \"shh, Daichi's still up\"" } },
+    { id: "e13e", from: "Yui", tier: "key", pivotal: true, delay: 4, cond: { route: "Encouraged" }, hesitate: true,
+      text: "ok he wants to kiss me. like right now. can I?",
+      choices: [
+        { type: "encouraging", text: "yes. kiss him. send me a pic after", reply: ["oh my god. ok. ok I'm doing it"] },
+        { type: "forgiving", text: "if you want to, I won't be mad", reply: ["I want to. is that awful"] },
+        { type: "wholesome", text: "I'd rather you didn't. come sit by Rika", reply: ["ok lol. ok I'll behave"] },
+        { type: "protective", text: "his girlfriend is in the next room. he doesn't care about anyone", reply: ["lol you're the one who started this"] }
+      ],
+      pushback: { cold: { type: "cold", text: "do what you want", think: [10, 14], reply: ["that's not a yes"] },
+                  jealous: { type: "jealous", text: "no. you're going to bed. alone", reply: ["you said it was ok!!"] } } },
+    { id: "e14e", from: "Yui", tier: "ambient", delay: 3, cond: { route: "Encouraged" }, text: "just a little kiss",
+      media: { id: "all_P08", kind: "photo", caption: "Kiss with Kenji at the after-party" } },
+    { id: "e15e", from: "Airi", channel: "insta", tier: "ambient", delay: 2, cond: { route: "Encouraged" }, text: "'a little kiss' lmao",
+      media: { id: "encouraged_P02", kind: "photo", caption: "Airi's make-out still" } },
+    { id: "e16e", from: "Yui", tier: "key", delay: 3, cond: { route: "Encouraged" }, text: "Airi filmed more of it. this ok? I'm only sending if you want it",
+      choices: [
+        { type: "encouraging", text: "send it", reply: ["ok. don't judge my face"] },
+        { type: "wholesome", text: "I'm good, just come back to me tomorrow", reply: ["always"] },
+        { type: "protective", text: "ask Airi to delete it, it'll end up everywhere", reply: ["lol it's fine, it's close friends"] }
+      ] },
+    { id: "e17e", from: "Yui", tier: "ambient", delay: 1, cond: { route: "Encouraged" }, text: "for you",
+      media: { id: "encouraged_d3_clip01", kind: "clip", caption: "Yui, to the camera: \"is he watching? hi Sora\"" } },
+    { id: "e17n", from: "Yui", tier: "ambient", delay: 3, cond: { route: "Naive" }, text: "French greeting part 2 lol. Rika filmed it, everyone was laughing",
+      media: { id: "naive_d3_clip01", kind: "clip", caption: "Yui, giggling: \"is this how they do it in Paris?\"" } },
+    { id: "e18n", from: "Rika", channel: "insta", tier: "ambient", delay: 3, cond: { route: "Naive" }, text: "1am and these two won't go to sleep",
+      media: { id: "naive_P05", kind: "photo", caption: "On the sofa with Kenji (Rika's story)" } },
+    { id: "e19", from: "Haruto", tier: "minor", delay: 3, text: "you still up? everything ok?",
+      choices: [ { text: "yeah. just waiting on her", reply: ["go to sleep man, you can't do anything from here"] },
+                 { text: "fine", reply: ["...ok"] } ] },
+    { id: "e20", from: "Yui", tier: "minor", delay: 3, text: "the wind is SO loud. night",
+      choices: [ { text: "night. stay safe", reply: ["I will"] }, { text: "night", reply: ["night"] } ] }
+  ] }
+};
 
+</script>
+<script>
+// Day 4 dialogue: essay "help". Same data shape as game/day1/data/day1.js.
+// ASCII only; emoji icons are \u escapes. cond.route = route gate (see day2.js header and README "Engine asks").
+// Clips: D4 evening (pool_c01) and D4b late night (pool_c06), per bible 22.2.
+// saw_deleted_clip (Guilt): engine sets it if Sora opens guilt_d4_clip01 within 60 s; the beat should be unsent after 60 s.
+//   That timer is not in the data shape; noted as a trigger in README.
+window.DAYS = window.DAYS || {};
+window.DAYS[4] = {
+  title: "Day 4 \u00b7 Essay help",
+  apartment: {
+    start: { morning: "futon", evening: "genkan" },
+    chores: [
+      { id: "breakfast", spot: "stove", slots: ["morning"], label: "\u{1F373} Make breakfast", dur: 4, setFlag: "d4_breakfast", st: "plate",
+        options: [ { key: "eggs", icon: "\u{1F373}", line: "Eggs on rice. You read last night's messages again while it goes cold." },
+                   { key: "toast", icon: "\u{1F35E}", line: "Toast. You don't taste it." },
+                   { key: "onigiri", icon: "\u{1F359}", line: "Onigiri from the konbini. The cashier asks if you're ok. You must look it." } ] },
+      { id: "dinner", spot: "stove", slots: ["evening"], label: "\u{1F35C} Make dinner", dur: 5, setFlag: "d4_dinner", st: "plate",
+        options: [ { key: "curry", icon: "\u{1F35B}", line: "The last of Mom's curry. You eat it slowly so there's something to do." },
+                   { key: "ramen", icon: "\u{1F35C}", line: "Cup ramen, eaten in front of a phone that keeps lighting up." } ] },
+      { id: "tv", spot: "tv", slots: ["morning", "evening"], label: "\u{1F4FA} Watch TV", dur: 5, icon: "\u{1F4FA}", st: "tv",
+        lines: [ "The typhoon has passed Tokyo. Trains are running normally. Of course they are now.",
+                 "A drama about a tutor and his student. The student is a grown woman and the tutor is not teaching her maths. You turn it off.",
+                 "Late news: Seiran University ranks third for student satisfaction. Good for them." ] },
+      { id: "shower", spot: "shower", slots: ["morning", "evening"], label: "\u{1F6BF} Shower", dur: 5, icon: "\u{1F6BF}", st: "steam",
+        lines: [ "You stand in the shower until you stop replaying the kiss.", "You don't stop replaying the kiss." ] },
+      { id: "jacket", spot: "closet", slots: ["morning"], label: "\u{1F9E5} Put on HayaEats jacket", dur: 2, icon: "\u{1F9E5}", setFlag: "d4_dressed", st: "dressed",
+        lines: [ "Jacket on. Better orders unlock today if your rating's good. Something to aim at." ] },
+      { id: "door", spot: "genkan", slots: ["morning", "evening"], special: "door" },
+      { id: "bed", spot: "futon", slots: ["morning", "evening"], special: "bed",
+        lines: [ "You put the phone face down. Then face up again." ] }
+    ]
+  },
+  customers: [
+    "you again! you're my favourite rider, don't tell the other one",
+    "thanks. you've got a face like a wet weekend, cheer up",
+    "my son's in Tokyo for uni too. he never calls. call your people",
+    "can I give you a tip in mikan? I've got too many mikan",
+    "oh good, still hot. thank you dear"
+  ],
+  morning: { startClock: "07:10", endClock: "13:00", beats: [
+    { id: "m01n", from: "Yui", tier: "ambient", delay: 1, cond: { route: "Naive" }, text: "good morning!! Kenji made breakfast for everyone who stayed over, he's so good at it" },
+    { id: "m01d", from: "Yui", tier: "ambient", delay: 1, cond: { route: "Desperate" }, text: "morning I guess" },
+    { id: "m01g", from: "Yui", tier: "ambient", delay: 1, cond: { route: "Guilt" }, hesitate: true, text: "I'm home. I'm sorry about last night. I keep thinking about it" },
+    { id: "m01e", from: "Yui", tier: "ambient", delay: 1, cond: { route: "Encouraged" }, text: "good morning. did you watch it more than once lol be honest" },
+    { id: "m02", from: "Mom", tier: "minor", delay: 2, text: "Yui ok after the typhoon? it looked terrible on the news",
+      choices: [ { text: "yeah she stayed at a friend's", reply: ["good, sensible girl"] },
+                 { text: "she's fine", reply: ["good"] } ] },
+    { id: "m03n", from: "Yui", tier: "key", pivotal: true, delay: 3, cond: { route: "Naive" },
+      text: "my first essay is due friday and I'm DYING. Kenji says he'll help me tonight, he's done like a hundred of them",
+      choices: [
+        { type: "wholesome", text: "that's nice of him. you've got this, you're the smartest person I know", reply: ["stop you're making me blush lol"] },
+        { type: "forgiving", text: "go for it, you don't need to ask me", reply: ["I'm not asking lol I'm telling. but thank you"] },
+        { type: "encouraging", text: "essay help, sure. tell me what he 'teaches' you", reply: ["lol what does that mean. ok I'll tell you everything"] },
+        { type: "protective", text: "he kissed you two nights ago. now he wants to be alone with you. see it?", reply: ["that was a greeting lol. you worry too much"] }
+      ],
+      pushback: { cold: { type: "cold", text: "ok good luck", think: [8, 12], reply: ["thanks I guess"] },
+                  jealous: { type: "jealous", text: "you're not doing it with him. do it alone", reply: ["why are you being like this"] } } },
+    { id: "m03d", from: "Yui", tier: "key", pivotal: true, delay: 3, cond: { route: "Desperate" },
+      text: "Haruto sent you that story didn't he. nothing happened. I barely talk to the guy",
+      choices: [
+        { type: "wholesome", text: "I'm not angry. I just miss you. can we talk tonight?", reply: ["...yeah. ok. I'd like that"] },
+        { type: "forgiving", text: "ok. I believe you", reply: ["good"] },
+        { type: "encouraging", text: "even if something did, I wouldn't mind", reply: ["fine maybe I WILL then. ...wait, you'd be ok with that?"] },
+        { type: "protective", text: "I'm not mad at you. he knew you were drunk and new", reply: ["you weren't even there to see"] }
+      ],
+      pushback: { cold: { type: "cold", text: "sure", think: [10, 14], hesitate: true, reply: ["whatever. you're not even here"] },
+                  jealous: { type: "jealous", text: "send me your location every night from now on", reply: ["seriously?? no"] } } },
+    { id: "m03g", from: "Yui", tier: "key", pivotal: true, delay: 3, cond: { route: "Guilt" },
+      text: "I'm going to avoid him I promise. it's only that he's helping with my essay tonight because Rika asked him to",
+      choices: [
+        { type: "forgiving", text: "it's ok. I trust you. don't beat yourself up about it", reply: ["you're too good to me"] },
+        { type: "wholesome", text: "maybe do it at the library with Rika there?", reply: ["yes. good idea. I'll do that"] },
+        { type: "encouraging", text: "you don't have to avoid him for me", reply: ["...why would you say that"] },
+        { type: "protective", text: "he forced a kiss on you and now he's your tutor? he's playing you", reply: ["you're right. I'll be careful. promise"] }
+      ],
+      pushback: { cold: { type: "cold", text: "fine", think: [10, 14], reply: ["please don't be like this"] },
+                  jealous: { type: "jealous", text: "if you see him tonight we're done", reply: ["it's an ESSAY sora"] } } },
+    { id: "m03e", from: "Yui", tier: "key", pivotal: true, delay: 3, cond: { route: "Encouraged" },
+      text: "he wants to 'help with my essay' tonight lol. we both know what that means. still ok?",
+      choices: [
+        { type: "encouraging", text: "still ok. better than ok. film something for me", reply: ["oh my god. ok. ok I will"] },
+        { type: "forgiving", text: "it's ok, just tell me after", reply: ["I'll tell you everything"] },
+        { type: "wholesome", text: "maybe just the essay tonight", reply: ["ok ok I'll behave lol. he's just showing me stuff anyway"] },
+        { type: "protective", text: "he's not being nice to you, he's just collecting girls", reply: ["lol since when do you care?"] }
+      ],
+      pushback: { cold: { type: "cold", text: "whatever", think: [10, 14], reply: ["you said you were into it"] },
+                  jealous: { type: "jealous", text: "no. I changed my mind", reply: ["you SAID it was ok... now I feel disgusting"] } } },
+    { id: "m04g", from: "Mei", tier: "minor", delay: 3, cond: { route: "Guilt" }, text: "she called me crying at 6am. she won't tell me what about. is it you?",
+      choices: [ { text: "something happened at the party. it wasn't her fault", reply: ["...ok. if that's what she told you"] },
+                 { text: "I don't know", reply: ["ok. look after her"] } ] },
+    { id: "m05", from: "Haruto", tier: "minor", delay: 3, text: "you holding up?",
+      choices: [ { text: "yeah. it's fine", reply: ["it's not fine but ok"] },
+                 { text: "not really", reply: ["want to get ramen after your shift"] } ] },
+    { id: "m06", from: "Yui", tier: "ambient", delay: 4, text: "class. the lecturer said my reading was 'unexpectedly sensual' lol I'm dead" }
+  ] },
+  shift: { startClock: "13:00", beats: [
+    { id: "s01", from: "HayaEats", tier: "ambient", at: 8, text: "Rating 4.8+: premium orders unlocked from today." },
+    { id: "s02g", from: "Yui", tier: "ambient", at: 20, cond: { route: "Guilt" }, text: "I messed up. I'm sorry",
+      media: { id: "guilt_P04", kind: "photo", caption: "Crying selfie" } },
+    { id: "s03g", from: "Daichi", channel: "insta", tier: "ambient", at: 70, cond: { route: "Guilt" }, text: "lunch with the cutest crybaby",
+      media: { id: "guilt_P05", kind: "photo", caption: "Laughing at an izakaya" } },
+    { id: "s02d", from: "Kenji", channel: "insta", tier: "ambient", at: 40, cond: { route: "Desperate" }, text: "her picks",
+      media: { id: "desperate_P09", kind: "photo", caption: "Playlist screenshot" } },
+    { id: "s02n", from: "Yui", tier: "minor", at: 40, cond: { route: "Naive" }, text: "what's a word for 'sad' that sounds clever",
+      choices: [ { text: "melancholy", reply: ["YES. you're smarter than Kenji lol"] }, { text: "sad but in french", reply: ["triste. done"] } ] },
+    { id: "s02e", from: "Yui", tier: "minor", at: 40, cond: { route: "Encouraged" }, text: "thinking about tonight in class. this is your fault",
+      choices: [ { text: "good", reply: ["you're the worst. I love it"] }, { text: "concentrate lol", reply: ["can't"] } ] },
+    { id: "s04", from: "Haruto", tier: "ambient", at: 90, text: "Ren's telling everyone you're 'the one with the Tokyo girlfriend'. like it's a disease lol" }
+  ] },
+  lateShift: { beats: [
+    { id: "l01", from: "Yui", tier: "minor", at: 10, text: "working again? ok",
+      choices: [ { text: "it's for the trip", reply: ["I know"] }, { text: "yeah", reply: ["ok"] } ] },
+    { id: "l02", from: "HayaEats", tier: "ambient", at: 30, text: "Late shift: pay x0.6 tonight." }
+  ] },
+  evening: { startClock: "18:30", endClock: "23:30", secPerDelay: 7, beats: [
+    { id: "e01g", from: "Yui", tier: "ambient", delay: 1, cond: { route: "Guilt" }, text: "essay night. just laptops and coffee",
+      media: { id: "guilt_P06", kind: "photo", caption: "Two laptops" } },
+    { id: "e02g", from: "Kenji", channel: "insta", tier: "ambient", delay: 4, cond: { route: "Guilt" }, text: "study break",
+      media: { id: "guilt_P07", kind: "photo", caption: "Wine and candles" } },
+    { id: "e01n", from: "Yui", tier: "ambient", delay: 1, cond: { route: "Naive" }, text: "essay is half done!! Kenji says my back is all knotted from hunching so he's showing me a massage thing",
+      media: { id: "naive_P06", kind: "photo", caption: "Empty massage set-up with candles" } },
+    { id: "e01d", from: "Yui", tier: "ambient", delay: 1, cond: { route: "Desperate" }, text: "doing my essay. don't need anything" },
+    { id: "e01e", from: "Yui", tier: "ambient", delay: 1, cond: { route: "Encouraged" }, text: "he's here. essay is open on the laptop. nobody is looking at it" },
+    { id: "e03", from: "Yui", tier: "key", delay: 2, text: "can you call? just for a minute",
+      choices: [
+        { type: "call_now", text: "calling", call: true, reply: ["thank you. I needed to hear you"] },
+        { type: "call_later", text: "can't right now, later?", reply: ["ok. later"] }
+      ] },
+    // D4 clip 1 (pool_c01)
+    { id: "e04n", from: "Yui", tier: "ambient", delay: 4, cond: { route: "Naive" }, text: "look what I learned",
+      media: { id: "naive_d4_clip01", kind: "clip", caption: "Yui: \"like this? am I doing it right?\" / Kenji: \"good girl. you're a natural\"" } },
+    { id: "e05n", from: "Yui", tier: "key", pivotal: true, delay: 1, cond: { route: "Naive" },
+      text: "he says relaxing is part of studying properly. I wrote two pages after lol",
+      choices: [
+        { type: "wholesome", text: "Yui... that isn't a massage. are you ok?", reply: ["of course I'm ok lol, it felt amazing. he's really good at explaining things"] },
+        { type: "forgiving", text: "if you're happy, I'm happy", reply: ["I'm SO happy. you're the best"] },
+        { type: "encouraging", text: "what else did he teach you", reply: ["lots lol. there's a second lesson after the essay is done"] },
+        { type: "protective", text: "that's not tutoring. he's taking advantage of you trusting him", reply: ["you worry too much. he said you'd say that lol. he wants to prove you wrong"] }
+      ],
+      pushback: { cold: { type: "cold", text: "cool", think: [10, 14], hesitate: true, reply: ["you didn't even watch it"] },
+                  jealous: { type: "jealous", text: "get him out of the flat now", reply: ["he's HELPING me??"] } } },
+    { id: "e04d", from: "seiran_tea_acc", channel: "insta", tier: "ambient", delay: 4, cond: { route: "Desperate" }, text: "Seiran first year 'barely talks to him' lol",
+      media: { id: "desperate_d4_clip01", kind: "clip", caption: "Yui: \"don't stop. he never does this to me\"" } },
+    { id: "e05d", from: "Yui", tier: "key", pivotal: true, delay: 2, cond: { route: "Desperate" }, hesitate: true,
+      text: "someone posted something. don't watch it. please",
+      choices: [
+        { type: "wholesome", text: "I'm here. talk to me. I'm not going anywhere", reply: ["why now. why are you only here now"] },
+        { type: "forgiving", text: "I won't watch it. it doesn't matter", reply: ["it does matter. but ok"] },
+        { type: "encouraging", text: "I already did. you looked like you were enjoying it", reply: ["...you're not mad? you actually watched it?"] },
+        { type: "protective", text: "whoever posted that is a creep. are you ok?", reply: ["I'm fine. Kenji's dealing with it"] }
+      ],
+      pushback: { cold: { type: "cold", text: "too late", think: [10, 15], hesitate: true, reply: ["right. ok then"] },
+                  jealous: { type: "jealous", text: "who is it. tell me his name", reply: ["you don't get to know"] } } },
+    { id: "e04g", from: "Yui", tier: "ambient", delay: 4, cond: { route: "Guilt" }, text: "",
+      media: { id: "guilt_d4_clip01", kind: "clip", caption: "Yui: \"wait, is it recording\" / Kenji: \"you want it to be\"" } },
+    { id: "e05g", from: "Yui", tier: "key", pivotal: true, delay: 1, cond: { route: "Guilt" }, hesitate: true,
+      text: "sorry that was a mistake. wrong file. I deleted it, did you see?",
+      choices: [
+        { type: "forgiving", text: "I didn't see anything. don't worry about it", reply: ["ok. good. thank you"] },
+        { type: "wholesome", text: "I saw something. I just want you to be honest with me", reply: ["it's not what it looked like. he pushed and I didn't know how to say no"] },
+        { type: "encouraging", text: "I saw. you didn't look like you minded", reply: ["...you're not mad?? you want to hear about it?"] },
+        { type: "protective", text: "if he's filming you, he's going to use it. please be careful", reply: ["you're right. I'll make him delete it. promise"] }
+      ],
+      pushback: { cold: { type: "cold", text: "sure. wrong file", think: [10, 15], reply: ["don't be like that"] },
+                  jealous: { type: "jealous", text: "send me the file. now", reply: ["no!! I deleted it"] } } },
+    { id: "e06g", from: "Mei", tier: "minor", delay: 3, cond: { route: "Guilt" }, text: "she sent me something and deleted it too. sora I think she's not telling you everything",
+      media: { id: "guilt_P11", kind: "photo", caption: "Mei's chat screenshot" },
+      choices: [ { text: "she's scared. he's been pushing her", reply: ["that's not what she said to me"] },
+                 { text: "I know", reply: ["ok. I'm sorry"] } ] },
+    { id: "e04e", from: "Yui", tier: "ambient", delay: 4, cond: { route: "Encouraged" }, text: "for you",
+      media: { id: "encouraged_d4_clip01", kind: "clip", caption: "Yui, to the lens: \"Sora, are you watching? ...he's so much bigger\"" } },
+    { id: "e05e", from: "Yui", tier: "key", pivotal: true, delay: 1, cond: { route: "Encouraged" }, hesitate: true,
+      text: "was that ok? tell me honestly. I can't stop shaking lol",
+      choices: [
+        { type: "encouraging", text: "it was perfect. I want more", reply: ["oh my god ok. he heard me read that and laughed"] },
+        { type: "forgiving", text: "it was ok. you didn't do anything wrong", reply: ["ok. ok good"] },
+        { type: "wholesome", text: "I love you. are you ok?", reply: ["I'm more than ok lol"] },
+        { type: "protective", text: "he filmed it on his phone too. I don't trust him with that", reply: ["lol relax, he's not like that"] }
+      ],
+      pushback: { cold: { type: "cold", text: "fine", think: [10, 14], reply: ["you said you were into it then you vanish?? fine"] },
+                  jealous: { type: "jealous", text: "you liked it way too much", reply: ["you ASKED for this"] } } },
+    { id: "e06e", from: "Yui", tier: "ambient", delay: 2, cond: { route: "Encouraged" }, text: "also. we're going to need supplies lol. just saying" },
+    { id: "e07", from: "Haruto", tier: "minor", delay: 3, text: "ramen tomorrow? you need to get out of that room",
+      choices: [ { text: "yeah ok", reply: ["good"] }, { text: "maybe", reply: ["that's a yes"] } ] },
+    // D4b late night clip (pool_c06)
+    { id: "e08n", from: "Yui", tier: "ambient", delay: 4, cond: { route: "Naive" }, text: "he said practice makes perfect",
+      media: { id: "naive_d4_clip02", kind: "clip", caption: "Yui, mouth full, laughing: \"is this a pass?\" / Kenji: \"top marks\"" } },
+    { id: "e09n", from: "Yui", tier: "ambient", delay: 1, cond: { route: "Naive" }, text: "the essay's done btw!! night night" },
+    { id: "e08d", from: "seiran_tea_acc", channel: "insta", tier: "ambient", delay: 4, cond: { route: "Desperate" }, text: "round two @yui.hnmr",
+      media: { id: "desperate_d4_clip02", kind: "clip", caption: "Kenji: \"say it.\" / Yui: \"it's better with you\"" } },
+    { id: "e09d", from: "Haruto", tier: "ambient", delay: 1, cond: { route: "Desperate" }, text: "dude they tagged her. it's everywhere" },
+    { id: "e08g", from: "Kenji", tier: "ambient", delay: 4, cond: { route: "Guilt" }, text: "she wanted you to see",
+      media: { id: "guilt_d4_clip02", kind: "clip", caption: "Yui: \"keep going. don't you dare stop\"" } },
+    { id: "e09g", from: "Yui", tier: "ambient", delay: 1, cond: { route: "Guilt" }, hesitate: true, text: "whatever he sent you I didn't say that. I didn't want that. please" },
+    { id: "e08e", from: "Yui", tier: "ambient", delay: 4, cond: { route: "Encouraged" }, text: "round 2, for you",
+      media: { id: "encouraged_d4_clip02", kind: "clip", caption: "Yui: \"tell Sora thank you\" / Kenji: \"thx bro\"" } },
+    { id: "e10", from: "Yui", tier: "minor", delay: 3, text: "night",
+      choices: [ { text: "night. love you", reply: ["love you"] }, { text: "night", reply: ["night"] } ] }
+  ] }
+};
 
+</script>
+<script>
+// Day 5 dialogue: the row and the gift request. Same data shape as game/day1/data/day1.js.
+// ASCII only; emoji icons are \u escapes. cond.route = route gate (see day2.js header and README "Engine asks").
+// Gift requests are key beats; the actual purchase is the existing shop (Morning/Evening only, bible 19.2).
+//   The choice only records intent via set:{d5_gift_promise}. The gift_* flag is set by the shop as now.
+// Encouraged condoms/lube request: bible says show only if E >= 25, else the hoodie request. With the route gate,
+//   Encouraged already implies E >= 35, so the condoms beat is cond.route Encouraged; non-Encouraged routes get their own ask.
+// Clips: D5 evening (pool_c05) and D5b late night (pool_c07).
+window.DAYS = window.DAYS || {};
+window.DAYS[5] = {
+  title: "Day 5 \u00b7 Something to wear",
+  apartment: {
+    start: { morning: "futon", evening: "genkan" },
+    chores: [
+      { id: "breakfast", spot: "stove", slots: ["morning"], label: "\u{1F373} Make breakfast", dur: 4, setFlag: "d5_breakfast", st: "plate",
+        options: [ { key: "eggs", icon: "\u{1F373}", line: "Tamagoyaki. It actually rolls this time. Nobody to show." },
+                   { key: "toast", icon: "\u{1F35E}", line: "Toast and the last of the jam she left here." },
+                   { key: "skip", icon: "\u2615", line: "Coffee. You count the trip fund instead of eating." } ] },
+      { id: "dinner", spot: "stove", slots: ["evening"], label: "\u{1F35C} Make dinner", dur: 5, setFlag: "d5_dinner", st: "plate",
+        options: [ { key: "nikujaga", icon: "\u{1F372}", line: "You try nikujaga, because she made it. Yours is worse." },
+                   { key: "bento", icon: "\u{1F371}", line: "Half-price bento. The sticker lady knows you by now." } ] },
+      { id: "tv", spot: "tv", slots: ["morning", "evening"], label: "\u{1F4FA} Watch TV", dur: 5, icon: "\u{1F4FA}", st: "tv",
+        lines: [ "Weather: a second typhoon is turning back towards Kanto for tomorrow night. Rail operators may suspend services.",
+                 "A couple on a dating show argue about washing up. The audience laughs.",
+                 "Shopping channel: a men's oversized hoodie, \"the one every girlfriend steals\"." ] },
+      { id: "shower", spot: "shower", slots: ["morning", "evening"], label: "\u{1F6BF} Shower", dur: 5, icon: "\u{1F6BF}", st: "steam",
+        lines: [ "You leave the phone outside the bathroom on purpose. You last four minutes.", "Hot water. The trip is two days away. You say it out loud to make it real." ] },
+      { id: "jacket", spot: "closet", slots: ["morning"], label: "\u{1F9E5} Put on HayaEats jacket", dur: 2, icon: "\u{1F9E5}", setFlag: "d5_dressed", st: "dressed",
+        lines: [ "Jacket on. One more good day and the trip's paid for. Maybe." ] },
+      { id: "door", spot: "genkan", slots: ["morning", "evening"], special: "door" },
+      { id: "bed", spot: "futon", slots: ["morning", "evening"], special: "bed",
+        lines: [ "Two more sleeps. You don't know if you want them to go fast or slow." ] }
+    ]
+  },
+  customers: [
+    "it's a gift order? for Tokyo? how romantic. oh, this is just my udon, sorry",
+    "you look happier today. or less sad. one of those",
+    "is that the HayaEats Gifts thing on your screen? my husband never bought me anything from that",
+    "thanks. tell Ren he still owes me a gyoza",
+    "you're a good boy. whoever she is, she's lucky"
+  ],
+  morning: { startClock: "07:10", endClock: "13:00", beats: [
+    { id: "m01", from: "Yui", tier: "ambient", delay: 1, text: "ugh Rika and Kenji are shouting in the kitchen. at 7am" },
+    { id: "m02n", from: "Yui", tier: "ambient", delay: 2, cond: { route: "Naive" }, text: "I think it's about dishes lol. he never does them at his own place either" },
+    { id: "m02d", from: "Yui", tier: "ambient", delay: 2, cond: { route: "Desperate" }, text: "she's being so mean to him. he doesn't deserve it" },
+    { id: "m02g", from: "Yui", tier: "ambient", delay: 2, cond: { route: "Guilt" }, hesitate: true, text: "I think it might be about me. I'm hiding in my room" },
+    { id: "m02e", from: "Yui", tier: "ambient", delay: 2, cond: { route: "Encouraged" }, text: "it's about me lol. Rika says she 'doesn't mind, she just wants to be asked'. so that's interesting" },
+    { id: "m03", from: "Mom", tier: "minor", delay: 3, text: "how's the trip fund? your dad says he's proud of you, he just won't say it",
+      choices: [ { text: "nearly there", reply: ["I'm proud of you. working this hard for someone. that's love"] },
+                 { text: "getting there", reply: ["keep going love"] } ] },
+    { id: "m04n", from: "Yui", tier: "ambient", delay: 3, cond: { route: "Naive" }, text: "outfit check before class!",
+      media: { id: "naive_P07", kind: "photo", caption: "Mirror selfie, men's sneakers in the genkan" } },
+    { id: "m04d", from: "Yui", tier: "ambient", delay: 3, cond: { route: "Desperate" }, text: "at the library",
+      media: { id: "desperate_P11", kind: "photo", caption: "Library desk" } },
+    { id: "m05d", from: "Kenji", channel: "insta", tier: "ambient", delay: 4, cond: { route: "Desperate" }, text: "co-pilot",
+      media: { id: "desperate_P12", kind: "photo", caption: "Her in his car" } },
+    { id: "m04g", from: "Yui", tier: "key", delay: 3, cond: { route: "Guilt" }, hesitate: true, text: "can I tell you something. he makes me uncomfortable. the way he looks at me",
+      choices: [
+        { type: "forgiving", text: "I believe you. you don't have to explain anything", reply: ["thank you. I don't deserve you"] },
+        { type: "wholesome", text: "then let's keep you away from him. stay with Mei this weekend?", reply: ["maybe. yeah. I'll ask her"] },
+        { type: "protective", text: "he's done this before, I bet. you're not imagining it", reply: ["you're right. I'll be careful. promise"] }
+      ] },
+    { id: "m04e", from: "Yui", tier: "ambient", delay: 3, cond: { route: "Encouraged" }, text: "Rika and I talked. she's cool with it. like actually cool. she said 'just don't use my towels' lol" },
+    { id: "m05", from: "Yui", tier: "key", pivotal: true, delay: 3,
+      text: "it's only two more days!! are you actually coming?? tell me you're coming",
+      choices: [
+        { type: "wholesome", text: "I'm coming. I've been saving every yen. I can't wait to see you", reply: ["I'm going to cry. ok I'm going to clean my room"] },
+        { type: "forgiving", text: "I'm trying. and whatever happens, it's ok", reply: ["why do you keep saying whatever happens"] },
+        { type: "encouraging", text: "I'm coming. and I want to meet him", reply: ["oh my god. you want to meet Kenji?? ok. ok. I'll tell him"] },
+        { type: "protective", text: "I'm coming. and I want to see where you are with Kenji for myself", reply: ["what does that mean"] }
+      ],
+      pushback: { cold: { type: "cold", text: "depends on money", think: [9, 13], hesitate: true, reply: ["right. money"] },
+                  jealous: { type: "jealous", text: "I'm coming to check on you", reply: ["check on me. wow"] } } },
+    { id: "m06", from: "Haruto", tier: "minor", delay: 3, text: "two days man. you nervous?",
+      choices: [ { text: "yeah weirdly", reply: ["it's going to be fine. probably"] }, { text: "nah", reply: ["liar"] } ] }
+  ] },
+  shift: { startClock: "13:00", beats: [
+    { id: "s01", from: "Ren", tier: "ambient", at: 10, text: "heard you're buying presents for Tokyo girl. cute. I'm still faster" },
+    { id: "s02n", from: "Yui", tier: "minor", at: 30, cond: { route: "Naive" }, text: "stop it, I'll be over soon",
+      choices: [ { text: "over where?", reply: ["that was for Rika lol, wrong chat"] }, { text: "??", reply: ["lol wrong chat, that was Rika"] } ] },
+    { id: "s02d", from: "Airi", channel: "insta", tier: "ambient", at: 30, cond: { route: "Desperate" }, text: "girl said she didn't bring anything nice lmaooo",
+      media: { id: "desperate_P10", kind: "photo", caption: "Lingerie flat-lay, no model" } },
+    { id: "s02g", from: "Rika", channel: "insta", tier: "ambient", at: 30, cond: { route: "Guilt" }, text: "we made up. movie day on the sofa",
+      media: { id: "guilt_P08", kind: "photo", caption: "On his lap on the sofa" } },
+    { id: "s02e", from: "Kenji", tier: "ambient", at: 30, cond: { route: "Encouraged" }, text: "hey man, it's Kenji. Yui gave me your LINE. just wanted to say thx bro" },
+    { id: "s03", from: "Yui", tier: "minor", at: 60, text: "did you eat lunch",
+      choices: [ { text: "yeah", reply: ["good"] }, { text: "between orders", reply: ["eat sitting down for once"] } ] },
+    { id: "s04", from: "HayaEats", tier: "ambient", at: 90, text: "Gifts tab: order by tonight for delivery to Tokyo tomorrow." }
+  ] },
+  lateShift: { beats: [
+    { id: "l01", from: "Yui", tier: "minor", at: 10, text: "working late again?",
+      choices: [ { text: "last push for the trip", reply: ["ok. I'll be here. ish"] }, { text: "yeah", reply: ["k"] } ] },
+    { id: "l02", from: "HayaEats", tier: "ambient", at: 30, text: "Late shift: pay x0.6 tonight." }
+  ] },
+  evening: { startClock: "18:30", endClock: "23:30", secPerDelay: 7, beats: [
+    // Gift ask, by route.
+    { id: "e01n", from: "Yui", tier: "key", delay: 1, cond: { route: "Naive" },
+      text: "ok random but Kenji's hoodie is SO comfy and I want one like it. the big grey one. would you get me one?",
+      choices: [
+        { type: "wholesome", text: "I'll get you one. then you'll have something of mine", reply: ["yes!! I'll wear it on the video call"], set: { d5_gift_promise: "hoodie" } },
+        { type: "forgiving", text: "just keep his, he won't mind", reply: ["lol he said the same thing"] },
+        { type: "protective", text: "I'll get you one. and give his back to him please", reply: ["ok ok. you're cute when you're jealous"], set: { d5_gift_promise: "hoodie" } }
+      ] },
+    { id: "e01d", from: "Yui", tier: "key", delay: 1, cond: { route: "Desperate" }, hesitate: true,
+      text: "I didn't bring anything nice to wear. like nice nice. you could get me something cute if you actually cared",
+      choices: [
+        { type: "wholesome", text: "I do care. I'll get you something", reply: ["...ok. thank you"], set: { d5_gift_promise: "cute" } },
+        { type: "cold", text: "can't afford it", think: [9, 13], reply: ["course you can't"] },
+        { type: "jealous", text: "who's it for. him?", reply: ["you don't trust me so why should I bother"] },
+        { type: "protective", text: "I'll get you flowers. you don't need to dress up for anyone there", reply: ["at least HE notices what I wear"], set: { d5_gift_promise: "flowers" } }
+      ] },
+    { id: "e01g", from: "Yui", tier: "key", delay: 1, cond: { route: "Guilt" }, hesitate: true,
+      text: "could you send me flowers? I just want something from you to feel better. I feel so bad all the time",
+      choices: [
+        { type: "forgiving", text: "of course. you don't have to feel bad, I promise", reply: ["you're too nice to me"], set: { d5_gift_promise: "flowers" } },
+        { type: "wholesome", text: "I'll send some. and I'll be there soon", reply: ["two days. I can do two days"], set: { d5_gift_promise: "flowers" } },
+        { type: "protective", text: "I'll send some. is something else going on with him?", reply: ["no. nothing. I'm just tired"], set: { d5_gift_promise: "flowers" } }
+      ] },
+    { id: "e01e", from: "Yui", tier: "key", pivotal: true, delay: 1, cond: { route: "Encouraged" },
+      text: "ok so. we need supplies. like condoms and lube. and I want them to be from you. is that insane",
+      choices: [
+        { type: "encouraging", text: "not insane. I'll order them on HayaEats now", reply: ["oh my god. he's laughing so hard. he says you're a legend"], set: { d5_gift_promise: "condoms" } },
+        { type: "forgiving", text: "it's not insane. do what you want", reply: ["I want you to send them though. that's the point"] },
+        { type: "wholesome", text: "I think I'd rather just see you", reply: ["ok ok I'll behave lol. he's just showing me stuff anyway"] },
+        { type: "protective", text: "he can buy his own. he's 24", reply: ["lol since when do you care? thought you liked this"] }
+      ],
+      pushback: { cold: { type: "cold", text: "maybe", think: [9, 13], reply: ["you said you were into it then you vanish?? fine"] },
+                  jealous: { type: "jealous", text: "no. this is going too far", reply: ["you SAID it was ok... now I feel disgusting"] } } },
+    { id: "e02", from: "Yui", tier: "ambient", delay: 3, text: "the hoodie, finally wearing it properly",
+      media: { id: "all_P06", kind: "photo", caption: "Yui in the oversized hoodie" } },
+    { id: "e03", from: "Yui", tier: "key", delay: 2, text: "call me?",
+      choices: [
+        { type: "call_now", text: "calling now", call: true, reply: ["you sound tired. two more days"] },
+        { type: "call_later", text: "in a bit?", reply: ["ok"] }
+      ] },
+    // D5 clip 1 (pool_c05)
+    { id: "e04n", from: "Yui", tier: "ambient", delay: 4, cond: { route: "Naive" }, text: "massage lesson part 2!!",
+      media: { id: "naive_d5_clip01", kind: "clip", caption: "Yui: \"is this the advanced bit?\" / Kenji: \"you're ready for it\"" } },
+    { id: "e04d", from: "Rika", tier: "ambient", delay: 4, cond: { route: "Desperate" }, text: "this is your girlfriend 'comforting' my boyfriend after our fight. thought you'd want to know",
+      media: { id: "desperate_d5_clip01", kind: "clip", caption: "Yui: \"she doesn't get you like I do\"" } },
+    { id: "e04g", from: "Daichi", tier: "ambient", delay: 4, cond: { route: "Guilt" }, text: "yo, is this your girl? the one who's 'uncomfortable'? lol",
+      media: { id: "guilt_d5_clip01", kind: "clip", caption: "Yui: \"harder. please\"" } },
+    { id: "e04e", from: "Yui", tier: "ambient", delay: 4, cond: { route: "Encouraged" }, text: "wearing it for him, thinking of you",
+      media: { id: "encouraged_d5_clip01", kind: "clip", caption: "Yui: \"Sora picked this one\" / Kenji: \"good taste, bro\"" } },
+    { id: "e05", from: "Yui", tier: "key", pivotal: true, delay: 2,
+      text: "two days. what do you want to do when you get here",
+      choices: [
+        { type: "wholesome", text: "just be with you. walk round Koenji, eat something, hold your hand", reply: ["that's so you lol. ok. that sounds perfect"] },
+        { type: "forgiving", text: "whatever you want. I'm just happy you want me there", reply: ["of course I want you here"] },
+        { type: "encouraging", text: "see how you've been spending your nights", reply: ["...ok. if you really want that"] },
+        { type: "protective", text: "spend it with you. not with Kenji around", reply: ["he's always around though lol. it's his girlfriend's flat"] }
+      ],
+      pushback: { cold: { type: "cold", text: "sleep probably", think: [9, 13], reply: ["wow. ok"] },
+                  jealous: { type: "jealous", text: "make sure he's not there", reply: ["I can't make him not be somewhere"] } } },
+    { id: "e06", from: "Haruto", tier: "minor", delay: 3, text: "did you buy her something? you're whipped man",
+      choices: [ { text: "yeah", reply: ["respect. whipped but respect"] }, { text: "not yet", reply: ["shop closes at midnight dude"] } ] },
+    // D5b late night clip (pool_c07)
+    { id: "e07n", from: "Yui", tier: "ambient", delay: 4, cond: { route: "Naive" }, text: "advanced lesson",
+      media: { id: "naive_d5_clip02", kind: "clip", caption: "Yui: \"Sora's never done it like this\" / Kenji: \"then you'll have to teach him\"" } },
+    { id: "e07d", from: "Airi", channel: "insta", tier: "ambient", delay: 4, cond: { route: "Desperate" }, text: "close friends only. she's not even hiding it anymore",
+      media: { id: "desperate_d5_clip02", kind: "clip", caption: "Yui: \"stay. don't go back to hers\"" } },
+    { id: "e07g", from: "Rika", tier: "ambient", delay: 4, cond: { route: "Guilt" }, text: "I found this on Kenji's phone. I'm sorry. I thought you should know",
+      media: { id: "guilt_d5_clip02", kind: "clip", caption: "Yui: \"don't tell anyone. especially not him\"" } },
+    { id: "e08g", from: "Yui", tier: "ambient", delay: 2, cond: { route: "Guilt" }, hesitate: true, text: "Rika said she sent you something. it's old. it's from before. he made me do it" },
+    { id: "e07e", from: "Yui", tier: "ambient", delay: 4, cond: { route: "Encouraged" }, text: "we made this for Sora",
+      media: { id: "encouraged_d5_clip02", kind: "clip", caption: "Yui: \"say hi\" / Kenji: \"hi Sora. she's all yours. after\"" } },
+    { id: "e09", from: "Yui", tier: "minor", delay: 3, text: "night. one more day",
+      choices: [ { text: "one more day. night", reply: ["night"] }, { text: "night", reply: ["night"] } ] }
+  ] }
+};
 
+</script>
 
 
 <script>
@@ -660,6 +1464,21 @@ window.DAYS[1] = {
 
 </script>
 <script>
+// Mirrors Loop Guard js/audio.js: looped sfx bed per clip, mute + volume in localStorage. Laptop build only.
+window.TG_AUDIO = (function () {
+  const LS = 'tg-audio-mute', LSV = 'tg-audio-vol';
+  let muted = localStorage.getItem(LS) === '1', vol = parseFloat(localStorage.getItem(LSV) || '0.28'), bed = null;
+  const apply = () => { if (bed) bed.volume = muted ? 0 : vol; };
+  function playClip(file) { stopClip(); if (!file || !window.LAPTOP_MEDIA) return;
+    bed = new Audio('sfx/' + file); bed.loop = true; apply(); bed.play().catch(() => {}); }
+  function stopClip() { if (!bed) return; bed.pause(); bed.removeAttribute('src'); bed = null; }
+  return { playClip, stopClip, isMuted: () => muted, vol: () => vol,
+    setMuted(on) { muted = !!on; localStorage.setItem(LS, muted ? '1' : '0'); apply(); },
+    setVol(v) { vol = Math.max(0, Math.min(1, +v)); localStorage.setItem(LSV, vol); apply(); } };
+})();
+
+</script>
+<script>
 // Clip player + EDI wrapper. LAPTOP_MEDIA is false unless the laptop index sets it before this script.
 window.LAPTOP_MEDIA = !!window.LAPTOP_MEDIA;
 window.TG_EDI = (function () { // same pattern as Loop Guard build/js/edi.js
@@ -676,13 +1495,15 @@ window.TG_EDI = (function () { // same pattern as Loop Guard build/js/edi.js
 })();
 window.TG_MEDIA = (function () {
   const LS_VP = 'tg-video-path';
-  const vpath = () => localStorage.getItem(LS_VP) || window.VIDEO_PATH_DEFAULT || 'media/';
+  const vpath = () => localStorage.getItem(LS_VP) || window.VIDEO_PATH_DEFAULT || 'media_flat/';
   function resolve(src, route) { // src: source id, {Route: id}, or a SCENE_ name
     if (src && typeof src === 'object') src = src[route] || src.Naive;
+    const slot = typeof src === 'string' && src.match(/^([a-z]+)_d(\d)_clip(\d+)$/); // Dialogue Writer slot ids
+    if (slot) { const e = ((window.CLIP_CALENDAR || {})[+slot[2]] || [])[+slot[3] - 1]; if (e) { let x = e[0]; if (typeof x === 'object') x = x[slot[1][0].toUpperCase() + slot[1].slice(1)] || x.Naive; src = x; } }
     const scene = (window.CLIP_SOURCES || {})[src] || src; return { src, scene };
   }
   let el = null, onDone = null, closed = true;
-  function exit(why) { if (closed) return; closed = true; try { TG_EDI.idle(); } catch (e) {} // every exit path → idle()
+  function exit(why) { if (closed) return; closed = true; try { TG_EDI.idle(); } catch (e) {} try { TG_AUDIO.stopClip(); } catch (e) {} // every exit path → idle()
     if (el) { const v = el.querySelector('video'); if (v) { v.pause(); v.removeAttribute('src'); v.load(); } el.remove(); el = null; }
     const cb = onDone; onDone = null; if (cb) cb(why); }
   function open(src, route, caption, done) {
@@ -690,21 +1511,26 @@ window.TG_MEDIA = (function () {
     el = document.createElement('div'); el.id = 'clipview';
     el.style.cssText = 'position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,.92);display:flex;flex-direction:column;align-items:center;justify-content:center;color:#eee;font:14px system-ui';
     const cap = `<div style="margin:8px;opacity:.8">${(caption || '').replace(/[<>&]/g, '')}</div>`;
-    const btn = '<button id="clipSkip" style="margin-top:10px;padding:8px 18px">✕ Close / skip</button>';
+    const ctl = window.LAPTOP_MEDIA ? `<div style="margin-top:8px;font-size:12px">🔊 <input id="clipVol" type="range" min="0" max="1" step="0.02" value="${TG_AUDIO.vol()}"> <label><input id="clipMute" type="checkbox" ${TG_AUDIO.isMuted() ? 'checked' : ''}> mute sound</label> <label><input id="ediMute" type="checkbox" ${TG_EDI.isMuted() ? 'checked' : ''}> EDI off</label> · EDI <input id="ediUrl" value="${TG_EDI.url()}" style="width:150px"></div>` : '';
+    const btn = ctl + '<button id="clipSkip" style="margin-top:10px;padding:8px 18px">✕ Close / skip</button>';
     if (!window.LAPTOP_MEDIA) {
       el.innerHTML = `<div style="border:2px dashed #888;border-radius:12px;padding:30px 40px;text-align:center;max-width:80vw">🎬 <b>Clip placeholder</b><br><span style="opacity:.7">${r.src}</span>${cap}<div style="opacity:.5;font-size:12px">Clips only play in the laptop build.</div></div>${btn}`;
     } else {
       el.innerHTML = `<video playsinline autoplay controls style="max-width:94vw;max-height:80vh;background:#000"></video>${cap}<div style="opacity:.5;font-size:11px">${r.src} → ${r.scene} (temp stand-in)</div>${btn}`;
       const v = el.querySelector('video'); v.src = vpath() + r.scene + '.mp4';
-      v.addEventListener('playing', () => TG_EDI.play(r.scene), { once: true });
+      v.muted = true; // stand-in mp4s are silent; sound comes from the sfx bed
+      v.addEventListener('playing', () => { TG_EDI.play(r.scene); TG_AUDIO.playClip((window.CLIP_SFX || {})[r.scene]); }, { once: true });
       v.addEventListener('ended', () => exit('ended')); v.addEventListener('error', () => { exit('error'); window.toast && toast('Clip failed to load: ' + r.scene); });
       v.play().catch(() => {}); // needs a user gesture; the ▶ tap provides it
     }
     document.body.appendChild(el);
     el.querySelector('#clipSkip').onclick = () => exit('skip');
+    const q = id => el.querySelector(id);
+    if (q('#clipVol')) { q('#clipVol').oninput = e => TG_AUDIO.setVol(e.target.value); q('#clipMute').onchange = e => TG_AUDIO.setMuted(e.target.checked);
+      q('#ediMute').onchange = e => TG_EDI.setMuted(e.target.checked); q('#ediUrl').onchange = e => TG_EDI.setUrl(e.target.value.trim()); }
     document.addEventListener('keydown', function k(e) { if (e.key === 'Escape') { document.removeEventListener('keydown', k); exit('skip'); } });
   }
-  window.addEventListener('beforeunload', () => { if (!closed) TG_EDI.idle(); });
+  window.addEventListener('beforeunload', () => { if (!closed) { TG_EDI.idle(); TG_AUDIO.stopClip(); } });
   return { open, exit, resolve, vpath, setVideoPath: p => localStorage.setItem(LS_VP, p) };
 })();
 
@@ -1411,6 +2237,7 @@ function landOutbox() {
 function condOk(b) {
   if (!b.cond) return true;
   const c = b.cond, m = S.meters, t = [];
+  if (c.route != null && S.route !== c.route) return false; // Dialogue Writer route gate
   if (c.minN != null) t.push(m.N >= c.minN); if (c.maxL != null) t.push(m.L < c.maxL);
   return c.any ? t.some(Boolean) : t.every(Boolean);
 }
@@ -2088,7 +2915,7 @@ function title() {
   const saved = load();
   showOverlay(`<h2>Last Train Home</h2><p class="muted">Day 1 · Move-in. Yui's moving to Tokyo for uni. You're staying in Minase, doing HayaEats deliveries to save ${yen(C.tripTarget)} so you can visit her.</p>
     <p class="muted" style="font-size:13px">Personal prototype. Placeholder art. Progress saves on this device.</p>
-    <p class="muted" style="font-size:11px;opacity:.7" id="buildStamp">2026-10-16 12:12 BST · day1 web</p>
+    <p class="muted" style="font-size:11px;opacity:.7" id="buildStamp">2026-10-16 12:19 BST · day1 web</p>
     <div class="diff">${saved && saved.slot !== 'title' ? '<button class="primary" id="cont">Continue</button>' : ''}<button ${saved && saved.slot !== 'title' ? '' : 'class="primary"'} id="newg">New game</button></div>`);
   if ($('cont')) $('cont').onclick = () => { S = saved; resume(); };
   $('newg').onclick = () => { localStorage.removeItem(SAVE_KEY); S = newState(); hideOverlay(); toMorning(); };
