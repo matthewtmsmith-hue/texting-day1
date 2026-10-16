@@ -7,7 +7,7 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="robots" content="noindex,nofollow">
-<meta name="tg-build" content="2026-10-16 07:43 BST · day1 web">
+<meta name="tg-build" content="2026-10-16 08:47 BST · day1 web">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <link rel="icon" href="data:,">
 <meta name="theme-color" content="#0d0f14">
@@ -15,12 +15,12 @@
   * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
   html, body { margin: 0; height: 100%; overflow: hidden; overscroll-behavior: none; touch-action: none; background: #0b0c10; }
   body { color: #e8e8ee; font: 16px/1.35 system-ui, "Segoe UI", Roboto, sans-serif; -webkit-user-select: none; user-select: none; -webkit-text-size-adjust: 100%; }
-  #app { position: relative; margin: 0 auto; width: 100%; max-width: 520px; height: 100vh; height: 100dvh; overflow: hidden; background: #14161c; }
-  #stage { position: absolute; inset: 0; }
+  #app { position: relative; margin: 0 auto; width: 100%; height: 100vh; height: 100dvh; overflow: hidden; background: #14161c; display: flex; flex-direction: row; }
+  #stage { position: relative; flex: 1 1 60%; min-width: 0; height: 100%; overflow: hidden; }
   #stage.buzz1 { animation: shake .15s 1; } #stage.buzz2 { animation: shake .15s 2; } #stage.buzz3 { animation: shake .4s 2; }
   @keyframes shake { 0%,100% { transform: translate(0,0);} 25% { transform: translate(-5px,1px);} 75% { transform: translate(5px,-1px);} }
   canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; background: #2b3a2b; touch-action: none; }
-  #banner { position: absolute; top: calc(env(safe-area-inset-top) + 112px); left: 8px; right: 8px; background: rgba(20,20,28,.96); border: 1px solid #444; border-radius: 14px; padding: 10px 14px; display: none; z-index: 30; }
+  #banner { position: absolute; top: 70px; left: 8px; right: 8px; max-width: 420px; margin: 0 auto; background: rgba(20,20,28,.96); border: 1px solid #444; border-radius: 14px; padding: 10px 14px; display: none; z-index: 30; }
   #banner b { color: #f7a1c4; }
   #controls { position: absolute; left: 0; right: 0; bottom: calc(env(safe-area-inset-bottom) + 10px); display: flex; gap: 10px; z-index: 6; justify-content: center; flex-wrap: wrap; padding: 0 10px; }
   button { background: #2e3240; color: #eee; border: 1px solid #4a5068; border-radius: 12px; padding: 12px 16px; min-height: 48px; cursor: pointer; font: inherit; touch-action: manipulation; }
@@ -34,15 +34,15 @@
   .row { display: flex; gap: 10px; flex-wrap: wrap; } .row button { flex: 1; }
   table.sum { border-collapse: collapse; width: 100%; margin: 8px 0; font-size: 14px; } table.sum td { padding: 4px 6px; border-bottom: 1px solid #2c3042; }
   /* touch controls */
-  #pad { position: absolute; left: 14px; bottom: calc(env(safe-area-inset-bottom) + 16px); width: 150px; height: 150px; border-radius: 50%; background: rgba(255,255,255,.08); border: 2px solid rgba(255,255,255,.18); z-index: 7; display: none; touch-action: none; }
-  #knob { position: absolute; left: 50%; top: 50%; width: 62px; height: 62px; margin: -31px 0 0 -31px; border-radius: 50%; background: rgba(255,255,255,.35); }
-  #actBtn { position: absolute; right: 14px; bottom: calc(env(safe-area-inset-bottom) + 30px); width: 110px; height: 110px; border-radius: 50%; z-index: 7; display: none; font-weight: 700; font-size: 15px; background: #c0392b; border-color: #e66; }
+  #pad { position: absolute; left: 14px; bottom: calc(env(safe-area-inset-bottom) + 16px); width: 124px; height: 124px; border-radius: 50%; background: rgba(255,255,255,.08); border: 2px solid rgba(255,255,255,.18); z-index: 7; display: none; touch-action: none; }
+  #knob { position: absolute; left: 50%; top: 50%; width: 52px; height: 52px; margin: -26px 0 0 -26px; border-radius: 50%; background: rgba(255,255,255,.35); }
+  #actBtn { position: absolute; right: calc(env(safe-area-inset-right) + 14px); bottom: calc(env(safe-area-inset-bottom) + 18px); width: 104px; height: 104px; border-radius: 50%; z-index: 7; display: none; font-weight: 700; font-size: 13px; line-height: 1.15; padding: 6px; background: #c0392b; border-color: #e66; }
   #phoneBtn { position: absolute; right: 14px; bottom: calc(env(safe-area-inset-bottom) + 152px); width: 64px; height: 64px; border-radius: 50%; z-index: 7; font-size: 26px; padding: 0; display: none; }
   #phoneBtn .badge { top: -2px; right: -2px; }
   /* phone */
-  #phone { position: absolute; inset: 0; z-index: 20; background: #0d0f14; display: flex; flex-direction: column; overflow: hidden; padding-top: env(safe-area-inset-top); }
-  #phone.closed { display: none; }
-  #phone.glance { bottom: 52%; opacity: .93; border-bottom: 3px solid #333a4a; }
+  #phone { position: relative; flex: 0 0 40%; max-width: 460px; min-width: 280px; height: 100%; z-index: 20; background: #0d0f14; display: flex; flex-direction: column; overflow: hidden; padding-left: env(safe-area-inset-left); border-right: 3px solid #2a3040; }
+  #phone.closed .pbody { visibility: hidden; }
+  #phone.riding .choices button:disabled { opacity: .7; }
   .pbar { padding: 8px 14px; display: flex; justify-content: space-between; align-items: center; font-size: 13px; color: #aaa; gap: 8px; }
   .pbar button { min-height: 38px; padding: 6px 12px; }
   .pbody { flex: 1; display: flex; flex-direction: column; min-height: 0; }
@@ -81,7 +81,15 @@
   @keyframes dot { 0%,60%,100% { transform: translateY(0); opacity: .45; } 30% { transform: translateY(-4px); opacity: 1; } }
   .typingb { display: inline-flex; gap: 5px; padding: 12px 16px; width: auto; }
   .tyhint { margin: 0 20px 14px; padding: 10px 14px; background: #1d2230; border-radius: 14px; color: #cfd3e0; }
-  #typingPill { position: absolute; top: calc(env(safe-area-inset-top) + 82px); left: 50%; transform: translateX(-50%); background: rgba(20,20,28,.9); border: 1px solid #444; border-radius: 16px; padding: 5px 12px; font-size: 13px; z-index: 22; display: none; pointer-events: none; white-space: nowrap; }
+  #typingPill { position: absolute; top: 46px; left: 50%; transform: translateX(-50%); background: rgba(20,20,28,.9); border: 1px solid #444; border-radius: 16px; padding: 5px 12px; font-size: 13px; z-index: 22; display: none; pointer-events: none; white-space: nowrap; }
+  #rotate { position: fixed; inset: 0; z-index: 100; background: #0d0f14; display: none; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 30px; color: #e8e8ee; }
+  #rotate .ph { font-size: 64px; animation: rot 2s ease-in-out infinite; } @keyframes rot { 0%,30% { transform: rotate(0); } 60%,100% { transform: rotate(-90deg); } }
+  @media (orientation: portrait) and (max-width: 900px) { #rotate { display: flex; } }
+  #toast { position: absolute; left: 50%; bottom: calc(env(safe-area-inset-bottom) + 14px); transform: translateX(-50%); max-width: 46%; background: rgba(15,17,24,.88); border: 1px solid #3a3f55; border-radius: 14px; padding: 8px 12px; font-size: 13px; z-index: 8; display: none; text-align: center; pointer-events: none; }
+  .msg { max-width: 88%; } .pbar { padding-top: calc(env(safe-area-inset-top) + 6px); }
+  #keyhint { position: absolute; left: 50%; bottom: calc(env(safe-area-inset-bottom) + 76px); transform: translateX(-50%); background: rgba(15,17,24,.85); border: 1px solid #3a3f55; border-radius: 12px; padding: 6px 12px; font-size: 14px; z-index: 8; display: none; pointer-events: none; white-space: nowrap; }
+  kbd { display: inline-block; min-width: 22px; padding: 1px 6px; border-radius: 6px; background: #e8e8ee; color: #111; font: 700 12px ui-monospace, Consolas, monospace; text-align: center; box-shadow: 0 2px 0 #888; margin-right: 4px; }
+  @media (pointer: coarse) { #keyhint { display: none !important; } }
 </style>
 
 <style id="ios-fs-hide">
@@ -92,18 +100,22 @@
 </head>
 <body>
 <div id="app">
+  <div id="phone" class="closed"></div>
   <div id="stage">
+    <div id="banner"></div>
+    <div id="typingPill"></div>
+    <div id="toast"></div>
+    <div id="keyhint"></div>
     <canvas id="cv"></canvas>
     <div id="controls"></div>
     <div id="pad"><div id="knob"></div></div>
     <button id="actBtn">STOP</button>
     <button id="phoneBtn" title="Phone (P)">📱</button>
   </div>
-  <div id="phone" class="closed"></div>
-  <div id="banner"></div>
-  <div id="typingPill"></div>
+  
   <div id="overlay"><div class="card" id="ocard"></div></div>
   <div id="debug"></div>
+  <div id="rotate"><div class="ph">📱</div><h2>Rotate your phone</h2><p class="muted">Last Train Home plays sideways: phone on the left, Minase on the right.</p></div>
   <button id="debugBtn" title="Debug: long-press (or ` / F2)">🐞</button>
 </div>
 <script>
@@ -220,6 +232,57 @@ window.GAME_DATA = {
 window.DAYS = window.DAYS || {};
 window.DAYS[1] = {
   title: "Day 1 · Move-in",
+
+  // ---- Sora's apartment (morning + evening). Chores are optional flavour: they never gate texts and give no
+  // stats or money. Each runs `dur` real seconds (time keeps passing as normal). Hooks marked placeholder: true
+  // are PLACEHOLDER DIALOGUE for Greg to review.
+  // fields: id, spot (see apartment.js SPOTS), slots, label, dur, icon, lines[] (one picked), options[] (cycled per use:
+  //         {key, icon, line}), setFlag (flag set to option key or true), st (apartment visual state key),
+  //         hook {once, slot, beat:{...minor/ambient beat}, placeholder}
+  apartment: {
+    start: { morning: "futon", evening: "genkan" },
+    chores: [
+      { id: "breakfast", spot: "stove", slots: ["morning"], label: "🍳 Make breakfast", dur: 4, setFlag: "d1_breakfast", st: "plate",
+        options: [ { key: "toast", icon: "🍞", line: "Two slices of toast, slightly burnt. Classic." },
+                   { key: "eggs", icon: "🍳", line: "Tamagoyaki. Okay, scrambled eggs that wanted to be tamagoyaki." },
+                   { key: "onigiri", icon: "🍙", line: "A konbini onigiri from the fridge. Tuna mayo, the good one." } ] },
+      { id: "dinner", spot: "stove", slots: ["evening"], label: "🍜 Make dinner", dur: 5, setFlag: "d1_dinner", st: "plate",
+        options: [ { key: "ramen", icon: "🍜", line: "Cup ramen. Three minutes is a long time when you're this hungry." },
+                   { key: "curry", icon: "🍛", line: "Mom's leftover curry. It's better on the second day anyway." },
+                   { key: "bento", icon: "🍱", line: "Half-price konbini bento. The sticker says 50% and so does your dignity." } ],
+        hook: { once: true, placeholder: true, beat: { id: "h_dinner", from: "Yui", tier: "minor", text: "did you eat dinner?? 🍜",
+          choicesByFlag: { flag: "d1_dinner",
+            ramen: [ { text: "cup ramen, I'm living the dream", reply: ["SORA 😭 eat a vegetable"] }, { text: "yeah, all good", reply: ["good 🥹"] } ],
+            curry: [ { text: "your favourite, Mom's curry", reply: ["no fair, I want some 😭"] }, { text: "yeah, all good", reply: ["good 🥹"] } ],
+            bento: [ { text: "half-price bento from the konbini lol", reply: ["the 8pm sticker bento, a classic"] }, { text: "yeah, all good", reply: ["good 🥹"] } ] } } } },
+      { id: "coffee", spot: "kettle", slots: ["morning"], label: "☕ Make coffee", dur: 3, icon: "☕", st: "mug", stVal: "coffee",
+        lines: [ "Instant coffee. It tastes like a vending machine, but it's warm." ] },
+      { id: "tea", spot: "kettle", slots: ["evening"], label: "🍵 Make tea", dur: 3, icon: "🍵", st: "mug", stVal: "tea",
+        lines: [ "Genmaicha. It smells like toast, in a good way." ] },
+      { id: "tv", spot: "tv", slots: ["morning", "evening"], label: "📺 Watch TV", dur: 5, icon: "📺", st: "tv",
+        lines: [ "Morning news: a goat escaped in Matsumoto and is \"doing well\".",
+                 "Weather: sunny in Minase, a typhoon somewhere far away. Probably fine.",
+                 "An anime rerun where the hero gives a speech for the entire episode.",
+                 "A cooking show makes curry look easy. It isn't.",
+                 "Variety show. Someone is eating very spicy ramen and regretting it." ],
+        hook: { once: true, slot: "morning", placeholder: true, beat: { id: "h_tv", from: "Haruto", tier: "ambient", text: "are you watching the news?? the matsumoto goat is a legend 🐐" } } },
+      { id: "game", spot: "console", slots: ["evening"], label: "🎮 Play a game", dur: 6, icon: "🎮",
+        lines: [ "One round of a kart racer. You lose to the CPU on the easiest setting.", "You beat a level you've been stuck on for a week. Nobody to tell." ] },
+      { id: "shower", spot: "shower", slots: ["morning", "evening"], label: "🚿 Shower", dur: 5, icon: "🚿", st: "steam",
+        lines: [ "Hot water, finally. You think about Yui on the shinkansen.", "The shower takes a minute to warm up. As always." ] },
+      { id: "teeth", spot: "sink", slots: ["morning", "evening"], label: "🪥 Brush teeth", dur: 3, icon: "🪥", lines: [ "Two minutes. You make it to about forty seconds." ] },
+      { id: "jacket", spot: "closet", slots: ["morning"], label: "🧥 Put on HayaEats jacket", dur: 2, icon: "🧥", setFlag: "d1_dressed", st: "dressed",
+        lines: [ "The HayaEats jacket. Very orange. Very visible." ] },
+      { id: "plant", spot: "plant", slots: ["morning", "evening"], label: "🪴 Water the plant", dur: 2, icon: "💧", st: "watered",
+        lines: [ "Yui gave you this plant. It's still alive, which feels like a win." ] },
+      { id: "window", spot: "window", slots: ["morning", "evening"], label: "🪟 Look outside", dur: 3, icon: "🪟",
+        linesBySlot: { morning: [ "Rice fields, the slow local train, and old Mr Sato on his bike.", "Blue sky. Tokyo's three hours that way." ],
+                       evening: [ "The konbini sign glows across the road. The last local train rattles past.", "Quiet. You can hear the frogs in the paddies." ] } },
+      { id: "desk", spot: "desk", slots: ["morning", "evening"], label: "💻 Check the trip fund", dur: 2, icon: "💻", lines: [ "You open the shinkansen booking page, look at the price, and close it again." ] },
+      { id: "door", spot: "genkan", slots: ["morning", "evening"], special: "door" },
+      { id: "bed", spot: "futon", slots: ["morning", "evening"], special: "bed" }
+    ]
+  },
   morning: { startClock: "07:10", endClock: "13:00", beats: [
     { id: "m01", from: "Mom", tier: "minor", delay: 1,
       text: "morning love. Yui gets to Tokyo today doesn't she? tell her good luck from me",
@@ -255,7 +318,11 @@ window.DAYS[1] = {
         { type: "protective", text: "he's keen. just keep an eye on him, you've known him for about ten minutes 🛡️", reply: ["he's Rika's boyfriend silly, apparently he's basically always here lol"] }
       ] },
     { id: "m08", from: "Mom", tier: "minor", delay: 3, text: "did you eat breakfast? and please don't ride like a maniac today",
-      choices: [ { text: "I had toast, I'll be careful", reply: ["toast isn't breakfast. be careful x"] },
+      choices: [ { text: "I had toast, I'll be careful", reply: ["toast isn't breakfast. be careful x"],
+                   // PLACEHOLDER hook: wording follows what Sora made in the apartment (flag d1_breakfast)
+                   textByFlag: { flag: "d1_breakfast", none: "not yet, I'll grab something. I'll be careful", toast: "I had toast, I'll be careful",
+                                 eggs: "I made eggs actually! I'll be careful", onigiri: "I had an onigiri, I'll be careful" },
+                   replyByFlag: { flag: "d1_breakfast", none: ["eat something before you go out on that bike"], eggs: ["look at you 🥹 be careful x"] } },
                  { text: "yes mom", reply: ["don't 'yes mom' me 😂"] } ] },
     { id: "m09", from: "Yui", tier: "minor", delay: 5, text: "ok the room is tiny but the window looks right at a vending machine lol",
       choices: [ { text: "a vending machine view, very Tokyo", reply: ["it glows at night, it's going to be my nightlight 😂"] },
@@ -699,13 +766,14 @@ function drawScooter(c, x, y, dir, wheel, rider, lean, bob) {
     c.restore(); }
   c.restore();
 }
-function drawWalker(c, x, y, dir, phase, moving) {
+function drawWalker(c, x, y, dir, phase, moving, o) {
+  o = o || {}; const jacket = o.jacket || '#2a8f8a';
   c.save(); c.translate(x, y); c.rotate(dir);
   c.fillStyle = 'rgba(0,0,0,.25)'; c.beginPath(); c.ellipse(2, 3, 10, 8, 0, 0, 7); c.fill();
   const sw = moving ? Math.sin(phase) * 5 : 0;
   c.fillStyle = '#3a3f55'; c.beginPath(); c.ellipse(sw, -4, 4, 2.6, 0, 0, 7); c.ellipse(-sw, 4, 4, 2.6, 0, 0, 7); c.fill();   // feet
-  c.fillStyle = '#ff7a45'; rr(c, -13, -7, 9, 14, 2); c.fill(); c.fillStyle = '#fff'; c.fillRect(-11, -1.5, 5, 3);   // bag on back
-  c.fillStyle = '#2a8f8a'; c.beginPath(); c.ellipse(-1, 0, 6, 9, 0, 0, 7); c.fill();                                  // shoulders
+  if (o.bag !== false) { c.fillStyle = '#ff7a45'; rr(c, -13, -7, 9, 14, 2); c.fill(); c.fillStyle = '#fff'; c.fillRect(-11, -1.5, 5, 3); }  // bag on back
+  c.fillStyle = jacket; c.beginPath(); c.ellipse(-1, 0, 6, 9, 0, 0, 7); c.fill();                                  // shoulders
   c.fillStyle = '#f1c9a5'; c.beginPath(); c.arc(1 - sw * 0.2, -8, 2.4, 0, 7); c.arc(1 + sw * 0.2, 8, 2.4, 0, 7); c.fill(); // hands
   c.fillStyle = '#2b2430'; c.beginPath(); c.arc(1, 0, 5.6, 0, 7); c.fill();                                           // hair
   c.fillStyle = '#4a3f52'; c.beginPath(); c.arc(-0.5, -1.5, 2.2, 0, 7); c.fill();
@@ -759,7 +827,7 @@ function draw(c, Wc, Hc, w, clock, dt, dpr) {
   const t = performance.now() / 1000;
   w.jobs.forEach((j, i) => { if (!j.done && i !== w.cur) drawMarker(c, j.door.x, j.door.y, t + i, `${i + 1}`, false); });
   if (p.onFoot) drawScooter(c, p.bx, p.by, p.bdir || 0, 0, false, 0, 0);
-  if (p.onFoot) drawWalker(c, p.x, p.y, p.wdir ?? p.dir, p.walk || 0, p.speed > 5);
+  if (p.onFoot) drawWalker(c, p.x, p.y, p.wdir ?? p.dir, p.walk || 0, p.speed > 5, { jacket: w.dressed ? '#ff7a45' : '#2a8f8a' });
   else drawScooter(c, p.x, p.y, p.dir, p.wheel || 0, true, p.lean || 0, p.speed > 10 ? Math.sin(t * 18) * 0.5 : 0);
   const j = w.jobs[w.cur]; if (j) drawMarker(c, j.door.x, j.door.y, t, `${w.cur + 1} · ${j.door.name}`, true);
   c.restore();
@@ -786,7 +854,126 @@ function drawMinimap(c, x, y, mw, w) {
   c.restore();
   return mh;
 }
-window.Town = { TS, W, H, PW, PH, spawn, doors, buildings, move, speedMult, pickJobs, distFrom, draw, drawMinimap, lightFor, resetCamera: () => { cam.init = false; }, tileAt, isSolid };
+window.Town = { drawWalker, TS, W, H, PW, PH, spawn, doors, buildings, move, speedMult, pickJobs, distFrom, draw, drawMinimap, lightFor, resetCamera: () => { cam.init = false; }, tileAt, isSolid };
+})();
+
+</script>
+<script>
+/* Sora's apartment in Minase (1LDK), walkable, code-drawn in the same style as town.js. Exposes window.Apt. */
+(function () {
+'use strict';
+const AW = 640, AH = 400, WT = 12;
+function rr(c, x, y, w, h, r) { c.beginPath(); c.moveTo(x + r, y); c.arcTo(x + w, y, x + w, y + h, r); c.arcTo(x + w, y + h, x, y + h, r); c.arcTo(x, y + h, x, y, r); c.arcTo(x, y, x + w, y, r); c.closePath(); }
+// walls (solid). Gaps in partitions are doorways.
+const walls = [
+  [0, 0, AW, WT], [0, AH - WT, 40, WT], [120, AH - WT, AW - 120, WT], [0, 0, WT, AH], [AW - WT, 0, WT, AH], // outer (front door gap x 40–120)
+  [150, 0, 8, 120], [150, 170, 8, 120],                    // bathroom/hall | LDK partition (gap 120–170)
+  [0, 170, 52, 8], [104, 170, 54, 8],                      // bathroom bottom wall (door gap 52–104)
+  [0, 292, 158, 6],                                        // genkan step (walkable "edge" drawn, see floors) -> not solid, removed below
+  [450, 0, 8, 210],                                        // LDK | tatami room partition (opening y 210–282)
+  [450, 282, 190, 8],                                      // sliding window to the balcony (glass)
+];
+walls.splice(7, 1); // the genkan step is a floor change, not a wall
+const floors = [
+  { x: WT, y: WT, w: 138, h: 158, kind: 'tile' },      // bathroom
+  { x: WT, y: 178, w: 138, h: 114, kind: 'wood' },     // hallway
+  { x: WT, y: 292, w: 146, h: 96, kind: 'genkan' },    // genkan (stone, step down)
+  { x: 158, y: WT, w: 292, h: 376, kind: 'wood' },     // LDK
+  { x: 458, y: WT, w: 170, h: 270, kind: 'tatami' },   // bedroom
+  { x: 458, y: 290, w: 170, h: 98, kind: 'balcony' },  // balcony (outside the glass)
+];
+// furniture: solid rects with a draw style
+const F = [
+  { id: 'counter', x: 170, y: WT, w: 210, h: 42, s: 'counter' }, { id: 'fridge', x: 384, y: WT, w: 56, h: 52, s: 'fridge' },
+  { id: 'table', x: 250, y: 190, w: 110, h: 70, s: 'table' }, { id: 'tvstand', x: 245, y: 352, w: 120, h: 30, s: 'tv' },
+  { id: 'futon', x: 492, y: 40, w: 96, h: 150, s: 'futon' }, { id: 'closet', x: 596, y: WT, w: 32, h: 190, s: 'closet' },
+  { id: 'shower', x: WT, y: WT, w: 70, h: 80, s: 'shower' }, { id: 'toilet', x: 100, y: WT, w: 40, h: 46, s: 'toilet' }, { id: 'sink', x: WT, y: 120, w: 50, h: 40, s: 'sink' },
+  { id: 'shoes', x: 124, y: 300, w: 28, h: 80, s: 'shoes' }, { id: 'plant', x: 410, y: 300, w: 30, h: 30, s: 'plant' },
+  { id: 'desk', x: 380, y: 140, w: 60, h: 40, s: 'desk' },
+];
+// interact spots (where Sora stands); ids are used by data/day1.js apartment.chores[].spot
+const SPOTS = {
+  stove: { x: 230, y: 78, face: -Math.PI / 2 }, kettle: { x: 330, y: 78, face: -Math.PI / 2 }, fridge: { x: 412, y: 88, face: -Math.PI / 2 },
+  tv: { x: 305, y: 318, face: Math.PI / 2 }, console: { x: 380, y: 340, face: Math.PI / 2 }, table: { x: 305, y: 280, face: -Math.PI / 2 },
+  futon: { x: 540, y: 215, face: -Math.PI / 2 }, closet: { x: 612, y: 222, face: -Math.PI / 2 }, window: { x: 545, y: 262, face: Math.PI / 2 },
+  plant: { x: 410, y: 280, face: Math.PI / 2 }, shower: { x: 60, y: 106, face: -Math.PI / 2 }, sink: { x: 82, y: 140, face: Math.PI },
+  genkan: { x: 80, y: 360, face: Math.PI / 2 }, desk: { x: 410, y: 205, face: -Math.PI / 2 },
+};
+const solids = walls.map(([x, y, w, h]) => ({ x, y, w, h })).concat(F.filter(f => f.s !== 'plant').map(f => ({ x: f.x, y: f.y, w: f.w, h: f.h })));
+solids.push({ x: 405, y: 300, w: 38, h: 34 });
+function blocked(x, y, r) { return x < r || y < r || x > AW - r || y > AH - r || solids.some(s => x + r > s.x && x - r < s.x + s.w && y + r > s.y && y - r < s.y + s.h); }
+function move(p, dx, dy, r) { if (!blocked(p.x + dx, p.y, r)) p.x += dx; if (!blocked(p.x, p.y + dy, r)) p.y += dy; }
+
+function drawFloor(c, f, t) {
+  if (f.kind === 'wood') { c.fillStyle = '#c99a6b'; c.fillRect(f.x, f.y, f.w, f.h); c.strokeStyle = 'rgba(90,55,25,.25)'; c.lineWidth = 1;
+    for (let y = f.y; y < f.y + f.h; y += 16) { c.beginPath(); c.moveTo(f.x, y); c.lineTo(f.x + f.w, y); c.stroke(); for (let x = f.x + ((y / 16) % 2) * 40; x < f.x + f.w; x += 80) { c.beginPath(); c.moveTo(x, y); c.lineTo(x, y + 16); c.stroke(); } } }
+  if (f.kind === 'tatami') { for (let i = 0; i < 6; i++) { const hz = i % 2 === 0, tx = f.x + (i % 2) * 85, ty = f.y + Math.floor(i / 2) * 90; c.fillStyle = '#c9cf8f'; c.fillRect(tx + 1, ty + 1, 84, 89);
+      c.strokeStyle = 'rgba(110,120,60,.35)'; for (let k = 4; k < (hz ? 89 : 84); k += 4) { c.beginPath(); if (hz) { c.moveTo(tx + 1, ty + k); c.lineTo(tx + 85, ty + k); } else { c.moveTo(tx + k, ty + 1); c.lineTo(tx + k, ty + 90); } c.stroke(); }
+      c.strokeStyle = '#3e4a33'; c.lineWidth = 2; c.strokeRect(tx + 1, ty + 1, 84, 89); c.lineWidth = 1; } }
+  if (f.kind === 'tile') { c.fillStyle = '#dfe9ee'; c.fillRect(f.x, f.y, f.w, f.h); c.strokeStyle = '#c3d2da'; for (let x = f.x; x < f.x + f.w; x += 14) { c.beginPath(); c.moveTo(x, f.y); c.lineTo(x, f.y + f.h); c.stroke(); } for (let y = f.y; y < f.y + f.h; y += 14) { c.beginPath(); c.moveTo(f.x, y); c.lineTo(f.x + f.w, y); c.stroke(); } }
+  if (f.kind === 'genkan') { c.fillStyle = '#8f8f94'; c.fillRect(f.x, f.y, f.w, f.h); c.fillStyle = 'rgba(255,255,255,.08)'; for (let i = 0; i < 30; i++) c.fillRect(f.x + (i * 53) % f.w, f.y + (i * 31) % f.h, 3, 3);
+    c.fillStyle = '#6b4a30'; c.fillRect(f.x, f.y - 4, f.w, 6); c.fillStyle = '#d8d0c0'; c.font = '600 10px system-ui'; c.textAlign = 'center'; c.fillText('玄関 genkan', f.x + 60, f.y + 20); }
+  if (f.kind === 'balcony') { c.fillStyle = '#b8b4ac'; c.fillRect(f.x, f.y, f.w, f.h); c.strokeStyle = '#9a958c'; for (let x = f.x; x < f.x + f.w; x += 24) { c.beginPath(); c.moveTo(x, f.y); c.lineTo(x, f.y + f.h); c.stroke(); }
+    // view: rice fields beyond the rail
+    const sky = t.night ? '#1b2346' : '#9fd27a'; c.fillStyle = sky; c.fillRect(f.x, AH - WT - 22, f.w, 22); }
+}
+function drawFurn(c, f, st) {
+  const { x, y, w, h } = f; c.fillStyle = 'rgba(0,0,0,.18)'; rr(c, x + 4, y + 5, w, h, 4); c.fill();
+  switch (f.s) {
+    case 'counter': c.fillStyle = '#e9e4da'; rr(c, x, y, w, h, 3); c.fill(); c.fillStyle = '#c7ccd2'; rr(c, x + 18, y + 6, 54, 30, 4); c.fill(); // sink
+      c.fillStyle = '#2b2b30'; for (const [a, b] of [[x + 110, y + 13], [x + 136, y + 13], [x + 110, y + 31], [x + 136, y + 31]]) { c.beginPath(); c.arc(a, b, 8, 0, 7); c.fill(); }
+      if (st.pan) { c.fillStyle = '#444'; c.beginPath(); c.arc(x + 110, y + 13, 10, 0, 7); c.fill(); c.fillStyle = '#ffd25a'; c.beginPath(); c.arc(x + 110, y + 13, 5, 0, 7); c.fill(); }
+      c.fillStyle = '#b8b0a2'; rr(c, x + 168, y + 8, 22, 26, 5); c.fill(); c.fillStyle = '#555'; c.fillRect(x + 186, y + 14, 8, 4); break; // kettle
+    case 'fridge': c.fillStyle = '#f4f6f8'; rr(c, x, y, w, h, 4); c.fill(); c.strokeStyle = '#b7bec6'; c.strokeRect(x + 3, y + 3, w - 6, h - 6); c.fillStyle = '#ffcf5a'; c.fillRect(x + 10, y + 34, 10, 10); c.fillStyle = '#7fb3ff'; c.fillRect(x + 26, y + 30, 8, 12); break;
+    case 'table': c.fillStyle = '#8a5a3a'; rr(c, x, y, w, h, 6); c.fill(); c.fillStyle = '#9d6b48'; rr(c, x + 5, y + 5, w - 10, h - 10, 4); c.fill();
+      c.fillStyle = '#d97e5a'; for (const [a, b] of [[x - 18, y + 20], [x + w + 2, y + 20], [x + 40, y + h + 4]]) { rr(c, a, b, 18, 26, 6); c.fill(); }
+      if (st.plate) { c.fillStyle = '#fff'; c.beginPath(); c.arc(x + 40, y + 34, 11, 0, 7); c.fill(); c.font = '13px system-ui'; c.textAlign = 'center'; c.fillText(st.plate, x + 40, y + 39); }
+      if (st.mug) { c.fillStyle = '#f2f2f2'; c.beginPath(); c.arc(x + 80, y + 30, 7, 0, 7); c.fill(); c.fillStyle = st.mug === 'tea' ? '#9bbf5a' : '#6b4226'; c.beginPath(); c.arc(x + 80, y + 30, 4.5, 0, 7); c.fill(); }
+      c.fillStyle = '#222'; c.fillRect(x + 64, y + 46, 18, 10); break; // phone charger lol
+    case 'tv': c.fillStyle = '#5a4130'; rr(c, x, y, w, h, 3); c.fill(); c.fillStyle = '#16181d'; rr(c, x + 10, y - 6, w - 20, 12, 3); c.fill();
+      if (st.tv) { c.fillStyle = `hsl(${(performance.now() / 20) % 360},70%,60%)`; c.fillRect(x + 14, y - 4, w - 28, 3); }
+      c.fillStyle = '#ddd'; c.fillRect(x + w - 30, y + 12, 22, 10); break;
+    case 'futon': c.fillStyle = st.futonMessy ? '#f2f2f6' : '#f6f6fa'; rr(c, x, y, w, h, 8); c.fill(); c.fillStyle = '#7fa4d9'; rr(c, x + 4, y + 40, w - 8, h - 44, 8); c.fill();
+      c.fillStyle = 'rgba(255,255,255,.35)'; for (let k = y + 52; k < y + h - 6; k += 14) c.fillRect(x + 8, k, w - 16, 3);
+      c.fillStyle = '#fff'; rr(c, x + 18, y + 8, w - 36, 26, 10); c.fill(); break;
+    case 'closet': c.fillStyle = '#e8dcc0'; c.fillRect(x, y, w, h); c.strokeStyle = '#a8946a'; c.lineWidth = 2; c.strokeRect(x + 2, y + 2, w - 4, h / 2 - 2); c.strokeRect(x + 2, y + h / 2, w - 4, h / 2 - 2); c.lineWidth = 1;
+      if (!st.dressed) { c.fillStyle = '#ff7a45'; rr(c, x + 6, y + 30, w - 12, 34, 4); c.fill(); c.fillStyle = '#fff'; c.fillRect(x + 10, y + 44, w - 20, 4); } break;
+    case 'shower': c.fillStyle = '#c9e3ee'; rr(c, x, y, w, h, 6); c.fill(); c.strokeStyle = '#8bb6c8'; c.strokeRect(x + 3, y + 3, w - 6, h - 6); c.fillStyle = '#9aa'; c.beginPath(); c.arc(x + w / 2, y + 14, 6, 0, 7); c.fill();
+      if (st.steam) { c.fillStyle = 'rgba(255,255,255,.5)'; for (let i = 0; i < 4; i++) { c.beginPath(); c.arc(x + 14 + i * 14, y + 40 + Math.sin(performance.now() / 300 + i) * 6, 9, 0, 7); c.fill(); } } break;
+    case 'toilet': c.fillStyle = '#fff'; rr(c, x + 6, y, w - 12, 16, 4); c.fill(); c.beginPath(); c.ellipse(x + w / 2, y + 30, 13, 15, 0, 0, 7); c.fill(); c.strokeStyle = '#ccd'; c.stroke(); break;
+    case 'sink': c.fillStyle = '#f3f3f3'; rr(c, x, y, w, h, 6); c.fill(); c.fillStyle = '#c4d4dc'; c.beginPath(); c.ellipse(x + 26, y + 20, 15, 11, 0, 0, 7); c.fill(); c.fillStyle = '#7fb3ff'; c.fillRect(x + 6, y + 4, 4, 12); break;
+    case 'shoes': c.fillStyle = '#6b4a30'; c.fillRect(x, y, w, h); for (let i = 0; i < 3; i++) { c.fillStyle = ['#e74c3c', '#333', '#fff'][i]; rr(c, x + 5, y + 8 + i * 24, 18, 9, 4); c.fill(); } break;
+    case 'plant': c.fillStyle = '#b5653f'; c.beginPath(); c.arc(x + 15, y + 15, 12, 0, 7); c.fill(); c.fillStyle = st.watered ? '#4caf50' : '#6f9a4a';
+      for (let i = 0; i < 6; i++) { const a = i * 1.05; c.beginPath(); c.ellipse(x + 15 + Math.cos(a) * 9, y + 15 + Math.sin(a) * 9, 9, 5, a, 0, 7); c.fill(); } break;
+    case 'desk': c.fillStyle = '#7a5a40'; rr(c, x, y, w, h, 3); c.fill(); c.fillStyle = '#ddd'; c.fillRect(x + 8, y + 6, 26, 18); c.fillStyle = '#ff7a45'; c.fillRect(x + 40, y + 10, 12, 16); break; // laptop + HayaEats helmet bag
+  }
+}
+function draw(c, Wc, Hc, room, clock, dt, Town) {
+  const L = Town.lightFor(clock), night = L.night > 0.3;
+  const zoom = Math.min(Wc / (AW + 30), (Hc - 70) / (AH + 20)), ox = (Wc - AW * zoom) / 2, oy = Math.max(56, (Hc - AH * zoom) / 2);
+  c.fillStyle = '#1b1d24'; c.fillRect(0, 0, Wc, Hc);
+  c.save(); c.translate(ox, oy); c.scale(zoom, zoom);
+  floors.forEach(f => drawFloor(c, f, { night }));
+  // window light patch on the tatami (day) / lamp glow (night)
+  if (!night) { c.fillStyle = 'rgba(255,240,190,.18)'; c.beginPath(); c.moveTo(470, 282); c.lineTo(620, 282); c.lineTo(600, 180); c.lineTo(490, 180); c.fill(); }
+  F.forEach(f => drawFurn(c, f, room.st));
+  c.fillStyle = '#3a3a44'; walls.forEach(([x, y, w, h]) => c.fillRect(x, y, w, h));
+  c.fillStyle = 'rgba(160,210,240,.7)'; c.fillRect(458, 283, 182, 6); // glass
+  c.fillStyle = '#7a5236'; c.fillRect(40, AH - WT, 80, WT); c.fillStyle = '#d8b26a'; c.fillRect(104, AH - WT + 3, 6, 6); // front door
+  // spots hint
+  const near = room.near;
+  if (near) { const sp = SPOTS[near]; const t = performance.now() / 1000; c.strokeStyle = 'rgba(255,207,90,.85)'; c.lineWidth = 2; c.setLineDash([5, 5]); c.beginPath(); c.arc(sp.x, sp.y, 16 + Math.sin(t * 4) * 2, 0, 7); c.stroke(); c.setLineDash([]); }
+  // Sora
+  const p = room.p; Town.drawWalker(c, p.x, p.y, p.dir, p.walk, p.moving, { jacket: room.st.dressed ? '#ff7a45' : '#6a7fb5', bag: false });
+  if (room.chore) { const ch = room.chore, f = Math.min(1, ch.t / ch.dur), bob = Math.sin(performance.now() / 180) * 3;
+    c.font = '22px system-ui'; c.textAlign = 'center'; c.fillText(ch.icon, p.x, p.y - 28 + bob);
+    c.strokeStyle = 'rgba(0,0,0,.35)'; c.lineWidth = 5; c.beginPath(); c.arc(p.x, p.y - 34, 17, 0, 7); c.stroke();
+    c.strokeStyle = '#ffcf5a'; c.lineWidth = 4; c.beginPath(); c.arc(p.x, p.y - 34, 17, -Math.PI / 2, -Math.PI / 2 + f * Math.PI * 2); c.stroke(); }
+  c.restore();
+  c.fillStyle = L.rgba; c.fillRect(0, 0, Wc, Hc);
+  if (night) { c.save(); c.globalCompositeOperation = 'lighter'; const lx = ox + 305 * zoom, ly = oy + 225 * zoom, g = c.createRadialGradient(lx, ly, 0, lx, ly, 260 * zoom); g.addColorStop(0, 'rgba(255,210,150,.35)'); g.addColorStop(1, 'rgba(255,210,150,0)'); c.fillStyle = g; c.fillRect(0, 0, Wc, Hc); c.restore(); }
+}
+window.Apt = { AW, AH, SPOTS, move, draw, blocked };
 })();
 
 </script>
@@ -810,7 +997,7 @@ let S = null;            // saved state
 let world = null;        // shift world (not saved)
 let keys = {}, joy = { x: 0, y: 0, on: false };
 let paused = false, lastT = performance.now(), saveTimer = 0, uiTimer = 0;
-let callUntil = 0;
+let callUntil = 0, lastPhoneTouch = -1e9;
 
 function newState() {
   return { v: 1, day: 1, slot: 'title', clock: hm('07:00'), meters: { ...C.startMeters }, startMeters: { ...C.startMeters },
@@ -1050,8 +1237,8 @@ function answer(beatId, idx) {
     if (ch.d) addM(ch.d, 'reply');
     Object.assign(S.flags, ch.set || {});
     msg.resolved = 'replied';
-    pushMsg({ chat: b.from, from: 'me', me: true, text: ch.text });
-    if (ch.reply && ch.reply.length) sendReplies(b.from, ch.reply, 'minor', ch);
+    pushMsg({ chat: b.from, from: 'me', me: true, text: choiceText(ch) });
+    const rep = choiceReply(ch); if (rep && rep.length) sendReplies(b.from, rep, 'minor', ch);
   }
   save(); renderPhone(true); renderControls();
 }
@@ -1078,7 +1265,7 @@ function startShift(diffKey, late) {
   const jobs = Town.pickJobs(dif.legTiles, r, C.firstLegScale).map(d => ({ door: d, legTime: 0, pay: 0, done: false, crashed: false }));
   world = { diff: diffKey, dif, late: !!late, mult: late ? C.lateShift.mult : 1, jobs, cur: 0, timeLeft: C.shiftSeconds, elapsed: 0, legStart: 0, done: false,
     p: { x: sp.x, y: sp.y, dir: -Math.PI / 2, speed: 0, onFoot: false, bx: sp.x, by: sp.y, bdir: 0, handover: 0, stun: 0, wob: 0, brake: false, wheel: 0, walk: 0, lean: 0 }, msg: 'Ride to customer 1 →' };
-  Town.resetCamera();
+  Town.resetCamera(); world.dressed = !!S.flags.d1_dressed;
   S.slot = 'shift'; S.clock = late ? hm('20:30') : hm(day().shift.startClock);
   S.q = { slot: late ? 'lateShift' : 'shift', idx: 0 };
   if (late) { S.lateDone = true; addM({ N: C.lateShift.N }, 'late shift'); }
@@ -1104,8 +1291,8 @@ function tickShift(dt) {
   w.timeLeft -= dt; w.elapsed += dt;
   if (w.timeLeft <= 0) { w.timeLeft = 0; endShift('timeout'); return; }
   const p = w.p;
-  let ix = (keys.ArrowRight || keys.d ? 1 : 0) - (keys.ArrowLeft || keys.a ? 1 : 0) + joy.x;
-  let iy = (keys.ArrowDown || keys.s ? 1 : 0) - (keys.ArrowUp || keys.w ? 1 : 0) + joy.y;
+  let ix = (keys.arrowright || keys.d ? 1 : 0) - (keys.arrowleft || keys.a ? 1 : 0) + joy.x;
+  let iy = (keys.arrowdown || keys.s ? 1 : 0) - (keys.arrowup || keys.w ? 1 : 0) + joy.y;
   const mag = Math.hypot(ix, iy); if (mag > 1) { ix /= mag; iy /= mag; }
   if (p.stun > 0) { p.stun -= dt; ix = iy = 0; }
   if (p.handover > 0) { p.handover -= dt; ix = iy = 0; if (p.handover <= 0) completeJob(); }
@@ -1117,7 +1304,7 @@ function tickShift(dt) {
     if (j && !j.done && p.handover <= 0 && Math.hypot(p.x - j.door.x, p.y - j.door.y) < 26) { p.handover = C.handoverSec; w.msg = 'Handing over the food…'; }
   } else {
     const max = C.bikeMaxSpeed * Town.speedMult(p.x, p.y, false);
-    const phoneUp = S.phone.open;
+    const phoneUp = performance.now() - lastPhoneTouch < 1500; // fiddling with the phone pane while riding = wobble/crash risk
     let turn = 0;
     if (mag > 0.1 && !p.brake) {
       let target = Math.atan2(iy, ix);
@@ -1147,6 +1334,7 @@ function completeJob() {
   w.msg = `Back to the scooter, then ride to customer ${w.cur + 1}`;
 }
 function action() { // big button / E / Space
+  if (S && (S.slot === 'morning' || S.slot === 'evening')) { roomAction(); return; }
   if (S.slot !== 'shift' || !world || world.done) return;
   const p = world.p;
   if (p.handover > 0 || p.stun > 0) return;
@@ -1165,7 +1353,17 @@ function resize() {
 function draw() {
   const W = cv.clientWidth, H = cv.clientHeight;
   ctx.clearRect(0, 0, W, H);
-  if (S && S.slot === 'shift' && world) drawTown(W, H); else drawRoom(W, H);
+  if (S && S.slot === 'shift' && world) drawTown(W, H);
+  else if (S && room && (S.slot === 'morning' || S.slot === 'evening' || S.slot === 'shift_select')) { const now = performance.now(), dt = Math.min(0.05, (now - (draw.last || now)) / 1000); draw.last = now; Apt.draw(ctx, W, H, room, S.clock, dt, Town); drawRoomHud(W, H); }
+  else drawRoom(W, H);
+}
+function drawRoomHud(W, H) {
+  const g = ctx.createLinearGradient(0, 0, 0, 54); g.addColorStop(0, 'rgba(10,12,18,.85)'); g.addColorStop(1, 'rgba(10,12,18,0)'); ctx.fillStyle = g; ctx.fillRect(0, 0, W, 54);
+  ctx.textAlign = 'left'; ctx.font = '800 22px system-ui'; ctx.fillStyle = '#fff'; ctx.fillText(fmtClock(S.clock), 40, 30);
+  ctx.font = '600 13px system-ui'; ctx.fillStyle = '#ffb36b';
+  const tgt = S.slot === 'morning' ? '13:00' : '23:30', left = Math.max(0, hm(tgt) - S.clock);
+  ctx.fillText(S.slot === 'morning' ? `🛵 HayaEats shift at 13:00 · ${Math.floor(left / 3600)}h ${Math.floor(left % 3600 / 60)}m` : `😴 Bed by 23:30 · ${Math.floor(left / 3600)}h ${Math.floor(left % 3600 / 60)}m`, 120, 22);
+  ctx.fillStyle = '#ccc'; ctx.fillText(`Sora's apartment, Minase · trip fund ${yen(S.money)}`, 120, 40);
 }
 function drawRoom(W, H) {
   const ev = S && (S.slot === 'evening' || S.slot === 'summary');
@@ -1216,13 +1414,13 @@ function badgeCounts() {
   return { red, yellow, white };
 }
 function openPhone(screen) { S.phone.open = true; if (screen) S.phone.screen = screen; clearUnread(); renderPhone(true); renderControls(); }
-function closePhone() { S.phone.open = false; renderPhone(true); renderControls(); }
+function closePhone() { renderPhone(true); renderControls(); } // phone pane is permanent now
 function clearUnread() { const sc = S.phone.screen; if (sc.startsWith('chat:')) S.unread[sc.slice(5)] = 0; if (sc === 'insta') S.feedUnread = 0; }
 let lastPhoneSig = '';
 function renderPhone(force) {
   if (!S) return;
-  const glance = S.slot === 'shift' && world && !world.done && !isSafe();
-  phoneEl.className = !S.phone.open || paused || S.slot === 'title' ? 'closed' : glance ? 'glance' : '';
+  S.phone.open = true; const glance = S.slot === 'shift' && world && !world.done && !isSafe();
+  phoneEl.className = S.slot === 'title' ? 'closed' : glance ? 'riding' : '';
   const sig = [S.phone.screen, S.msgs.length, glance, isSafe(), S.outbox.length, typingChats().join(), S.money, S.slot, JSON.stringify(badgeCounts()), Math.floor(S.clock / 60)].join('|');
   if (!force && sig === lastPhoneSig) return; lastPhoneSig = sig;
   if (S.phone.open) clearUnread();
@@ -1231,7 +1429,7 @@ function renderPhone(force) {
   if (phoneEl.className === 'closed') return;
   const sc = S.phone.screen; let body = '';
   const closeLbl = S.slot === 'shift' ? '✕ Map' : '✕ Room';
-  const bar = `<div class="pbar"><span><b style="font-size:15px;color:#fff">${fmtClock(S.clock)}</b> · ${yen(S.money)}${nextUpHTML()}</span>${glance ? '<span class="ring">glance · stop to reply</span>' : ''}<button data-a="close">${closeLbl}</button></div>`;
+  const bar = `<div class="pbar"><span><b style="font-size:15px;color:#fff">${fmtClock(S.clock)}</b> · ${yen(S.money)}${nextUpHTML()}</span>${glance ? '<span class="ring">🚲 riding · pull over to reply</span>' : ''}</div>`;
   if (sc === 'home') {
     const ur = c => S.unread[c] || 0, lineUnread = Object.values(S.unread).reduce((a, b) => a + b, 0);
     body = `<div class="pscroll"><div class="apps">
@@ -1276,7 +1474,7 @@ function nextUpHTML() {
 }
 function renderTypingPill() {
   const el = $('typingPill'); if (!el || !S) return;
-  const t = S.phone.open && !phoneEl.classList.contains('glance') ? [] : typingChats().filter(c => c !== 'HayaEats');
+  const t = typingChats().filter(c => c !== 'HayaEats' && S.phone.screen !== 'chat:' + c);
   const html = t.length ? `${esc((CT[t[0]] || { name: t[0] }).name)} is typing<span class="dots"><i></i><i></i><i></i></span>` : '';
   if (el.dataset.h !== html) { el.dataset.h = html; el.innerHTML = html; el.style.display = html ? 'block' : 'none'; }
 }
@@ -1286,6 +1484,9 @@ function msgHTML(m) {
   if (m.sys) return `<div class="msg sys">${esc(m.text)}</div>`;
   return `<div class="msg ${m.me ? 'me' : ''}">${m.media ? photoHTML(m.media) : ''}${esc(m.text)}<div class="t">${fmtClock(m.t)}${m.me ? ' · 既読' : ''}${m.resolved === 'missed' ? ' · missed' : ''}</div></div>`;
 }
+function flagPick(o, fallback) { if (!o) return fallback; const v = S.flags[o.flag]; return o[v] ?? (v == null ? o.none : undefined) ?? fallback; }
+function choiceText(c) { return flagPick(c.textByFlag, c.text); }
+function choiceReply(c) { return flagPick(c.replyByFlag, c.reply); }
 function choicesHTML(list) {
   const m = list.slice().reverse().find(x => !x.me && x.beat && (x.kind === 'key' || x.kind === 'minor') && !x.resolved);
   if (!m) return '';
@@ -1294,7 +1495,7 @@ function choicesHTML(list) {
   let lbl = b.tier === 'key' ? (b.pivotal ? '🔴 Big moment' : '🔴 She\'s waiting for an answer') : '';
   if (b.tier === 'minor') { const mi = S.minors.find(x => x.beat === b.id); if (mi && mi.deadline) lbl = `<span class="ring">🟡 reply soon · ${Math.max(0, Math.ceil(mi.deadline - S.rt))}s</span>`; }
   return `<div class="choices ${b.pivotal ? 'pivotal' : ''}"><div class="lbl">${lbl}</div>` + chs.map((c, i) =>
-    `<button data-ans="${b.id}" data-i="${i}" ${safe ? '' : 'disabled'}>${safe ? esc(c.text) : 'Pull over to reply 🚲'}</button>`).join('') + '</div>';
+    `<button data-ans="${b.id}" data-i="${i}" ${safe ? '' : 'disabled'}>${safe ? esc(choiceText(c)) : 'Pull over to reply 🚲'}</button>`).join('') + '</div>';
 }
 function slotActionsHTML() {
   if (S.slot === 'morning') return `<button class="primary" data-a="work" style="width:100%" ${canLeaveMorning() ? '' : 'disabled'}>${slotScriptDone() ? "It's 13:00, start your shift 🛵" : 'Go to work 🛵'}</button><p class="muted" style="font-size:12px">${canLeaveMorning() ? (S.pending ? 'Yui is still waiting on an answer. You can reply on a stop during the shift.' : '') : 'Your morning texts are still coming in…'}</p>`;
@@ -1309,7 +1510,9 @@ function canLeaveMorning() {
 }
 function canSleep() { return S.slot === 'evening' && slotScriptDone() && !S.pending && !S.keyQueue.length && !S.outbox.length; }
 
-phoneEl.addEventListener('click', e => {
+phoneEl.addEventListener('pointerdown', () => { lastPhoneTouch = performance.now(); });
+phoneEl.addEventListener('wheel', () => { lastPhoneTouch = performance.now(); }, { passive: true });
+phoneEl.addEventListener('click', e => { setTimeout(() => { if (document.activeElement && document.activeElement.blur) document.activeElement.blur(); }, 0);
   const t = e.target.closest('[data-go],[data-a],[data-ans],[data-buy]'); if (!t) return;
   if (t.dataset.go) { S.phone.screen = t.dataset.go; clearUnread(); renderPhone(true); }
   else if (t.dataset.ans) answer(t.dataset.ans, +t.dataset.i);
@@ -1331,10 +1534,86 @@ function buy(id) {
   save(); renderPhone(true);
 }
 
+/* ---------- apartment (morning / evening) ---------- */
+let room = null;
+const AP = () => day().apartment;
+function choreList() { return AP().chores.filter(c => c.slots.includes(S.slot)); }
+function startRoom(where) {
+  const sp = Apt.SPOTS[AP().start[where] || 'futon'];
+  room = { p: { x: sp.x, y: sp.y + (where === 'evening' ? -30 : 0), dir: sp.face, walk: 0, moving: false }, st: Object.assign({}, S.roomSt || {}), near: null, chore: null };
+  if (S.flags.d1_dressed) room.st.dressed = true;
+}
+function nearChore() {
+  if (!room) return null; let best = null, bd = 34;
+  for (const c of choreList()) { const sp = Apt.SPOTS[c.spot]; const d = Math.hypot(room.p.x - sp.x, room.p.y - sp.y); if (d < bd) { bd = d; best = c; } }
+  return best;
+}
+function choreLabel(c) {
+  if (!c) return '';
+  if (c.special === 'door') {
+    if (S.slot === 'morning') return canLeaveMorning() ? (slotScriptDone() ? "🛵 Head out to work (it's 13:00)" : '🛵 Head out early') : '🚪 Front door (shift at 13:00)';
+    return S.lateDone ? '🚪 Front door' : '🛵 Late shift (pay ×0.6)';
+  }
+  if (c.special === 'bed') return S.slot === 'evening' ? (canSleep() ? '😴 Go to sleep' : (S.pending || S.keyQueue.length) ? "😴 Bed (Yui's waiting for an answer)" : '😴 Bed (not tired yet)') : '🛏️ Fold the futon';
+  return c.label;
+}
+function toast(text) { const t = $('toast'); t.textContent = text; t.style.display = 'block'; clearTimeout(toast.t); toast.t = setTimeout(() => t.style.display = 'none', 3800); }
+function roomAction() {
+  if (!room || room.chore) return;
+  const c = nearChore(); if (!c) return;
+  if (c.special === 'door') {
+    if (S.slot === 'morning') { if (canLeaveMorning()) { if (!S.flags.d1_dressed) toast("You head out in your hoodie. The HayaEats jacket's still in the closet."); toShiftSelect(false); } else toast("Shift's at 13:00. Yui's still texting."); }
+    else if (!S.lateDone) toShiftSelect(true); else toast('Not going out again tonight.');
+    return;
+  }
+  if (c.special === 'bed') {
+    if (S.slot === 'evening') { if (canSleep()) sleep(); else toast((S.pending || S.keyQueue.length) ? "You can't sleep yet. Yui's waiting for an answer." : "Not tired yet. Yui's still texting."); }
+    else { room.st.futonMessy = false; toast('You fold the futon away. Mom would be proud.'); }
+    return;
+  }
+  const n = (S.flags['uses_' + c.id] = (S.flags['uses_' + c.id] || 0) + 1);
+  let icon = c.icon, line;
+  if (c.options) { const o = c.options[(n - 1) % c.options.length]; icon = o.icon; line = o.line; if (c.setFlag) S.flags[c.setFlag] = o.key; if (c.st) room.st[c.st] = o.icon; }
+  else { const pool = c.linesBySlot ? c.linesBySlot[S.slot] : c.lines; line = pool[(n - 1) % pool.length]; if (c.setFlag) S.flags[c.setFlag] = true; if (c.st) room.st[c.st] = c.stVal || true; }
+  const sp = Apt.SPOTS[c.spot]; room.p.x = sp.x; room.p.y = sp.y; room.p.dir = sp.face;
+  if (c.id === 'shower') room.st.steam = true; if (c.id === 'tv') room.st.tv = true; if (c.id === 'breakfast' || c.id === 'dinner') room.st.pan = true;
+  room.chore = { c, t: 0, dur: c.dur, icon, line };
+}
+function finishChore() {
+  const ch = room.chore, c = ch.c; room.chore = null; room.st.steam = false; room.st.pan = false; if (c.id === 'tv') room.st.tv = false;
+  toast(ch.line); S.roomSt = { plate: room.st.plate, mug: room.st.mug, watered: room.st.watered, dressed: room.st.dressed };
+  S.log.push(`${fmtClock(S.clock)} chore ${c.id}`);
+  if (c.hook && !S.flags['hook_' + c.id] && (!c.hook.slot || c.hook.slot === S.slot)) {
+    S.flags['hook_' + c.id] = true; const hb = Object.assign({}, c.hook.beat);
+    if (hb.choicesByFlag) hb.choices = hb.choicesByFlag[S.flags[hb.choicesByFlag.flag]] || hb.choicesByFlag[Object.keys(hb.choicesByFlag)[1]];
+    S.extraBeats[hb.id] = hb; const th = thinkFor('default');
+    sendFrom(hb.from, hb.text, { kind: hb.tier, beat: hb.id }, th.t + 4, th.hes);
+    if (hb.tier === 'minor') S.minors.push({ beat: hb.id, from: hb.from, openedAt: null, deadline: null, slot: S.slot });
+  }
+  save();
+}
+function tickRoom(dt) {
+  if (!room) return;
+  const p = room.p;
+  let ix = (keys.arrowright || keys.d ? 1 : 0) - (keys.arrowleft || keys.a ? 1 : 0) + joy.x;
+  let iy = (keys.arrowdown || keys.s ? 1 : 0) - (keys.arrowup || keys.w ? 1 : 0) + joy.y;
+  const m = Math.hypot(ix, iy); if (m > 1) { ix /= m; iy /= m; }
+  if (room.chore) { if (m > 0.3 && room.chore.t > 0.4) { room.chore = null; room.st.steam = room.st.tv = room.st.pan = false; toast('You leave it for now.'); } else { room.chore.t += dt; if (room.chore.t >= room.chore.dur) finishChore(); } }
+  else if (m > 0.1) { p.dir = Math.atan2(iy, ix); p.walk += dt * 11; Apt.move(p, ix * 120 * dt, iy * 120 * dt, 9); p.moving = true; } else p.moving = false;
+  const nc = nearChore(); room.near = nc ? nc.spot : null;
+}
+function renderKeyHint() {
+  const el = $('keyhint'); if (!el || !S) return; let txt = '';
+  if ((S.slot === 'morning' || S.slot === 'evening') && room) { const c = nearChore(); txt = room.chore ? `${room.chore.icon} … (move to stop)` : c ? `<kbd>E</kbd> ${esc(choreLabel(c))}` : '<kbd>WASD</kbd> walk · <kbd>E</kbd> use things'; }
+  else if (S.slot === 'shift' && world && !world.done) { const p = world.p;
+    txt = p.handover > 0 ? 'Handing over…' : p.onFoot ? (Math.hypot(p.x - p.bx, p.y - p.by) < 40 ? '<kbd>E</kbd> get on the scooter' : '<kbd>WASD</kbd> walk to the glowing door') : p.speed >= 5 ? '<kbd>E</kbd> brake · stop to reply on the phone' : '<kbd>E</kbd> get off · <kbd>WASD</kbd> ride'; }
+  if (el.dataset.h !== txt) { el.dataset.h = txt; el.innerHTML = txt; el.style.display = txt ? 'block' : 'none'; }
+}
+
 /* ---------- slot flow ---------- */
 function toMorning() {
-  S.slot = 'morning'; S.clock = hm(day().morning.startClock); startQueue('morning');
-  openPhone('home'); renderControls(); save();
+  S.slot = 'morning'; S.clock = hm(day().morning.startClock); startQueue('morning'); startRoom('morning');
+  openPhone('chat:Yui'); renderControls(); save();
 }
 function toShiftSelect(late) {
   if (!late) leaveSlot(); else { S.eveClock = S.clock; S.eveningQ = S.q; }
@@ -1343,7 +1622,7 @@ function toShiftSelect(late) {
   showOverlay(`<h2>🛵 HayaEats ${late ? 'late shift' : 'afternoon shift'}</h2>
     <p class="muted">3 customers, one 2:00 timer. Each job pays by how fast you reach it. Anyone you don't reach pays ¥0. Yui keeps texting; stopping to reply costs time.${late ? ' Late shift pays ×0.6.' : ''}</p>
     <div class="diff">${Object.keys(ds).map(k => `<button data-d="${k}"><b>${ds[k].label}</b> · up to ${yen(ds[k].maxPay * 3 * (late ? C.lateShift.mult : 1))}<br><span class="muted">${ds[k].desc} · par ${ds[k].par}s/leg</span></button>`).join('')}</div>
-    <p class="muted" style="font-size:13px">Controls: joystick or WASD/arrows to ride. STOP button (or E/Space) brakes, then gets off the bike. Walk into the yellow ring to hand over. 📱 (or P) opens the phone; you can read while riding, but you can only reply when you're stopped or on foot.</p>
+    <p class="muted" style="font-size:13px">Controls: joystick or WASD/arrows to ride. E (or Space / the round button) brakes, then gets off. Walk into the glowing door to hand over. The phone stays open on the left: read any time, reply only when stopped or on foot.</p>
     ${late ? '<button data-d="cancel" style="width:100%">Never mind</button>' : ''}`);
   ocard.querySelectorAll('[data-d]').forEach(b => b.onclick = () => { if (b.dataset.d === 'cancel') { hideOverlay(); return; } startShift(b.dataset.d, late); });
   renderControls(); save();
@@ -1352,7 +1631,7 @@ function toEvening(fromLate) {
   hideOverlay(); S.slot = 'evening';
   if (!fromLate) { S.clock = Math.max(S.clock, hm(day().evening.startClock)); startQueue('evening'); }
   else { S.clock = S.eveClock ?? S.clock; if (S.eveningQ) { S.q = S.eveningQ; S.q.segFrom = S.clock; S.q.segReal = 0; } }
-  openPhone('home'); renderControls(); save();
+  startRoom('evening'); openPhone('home'); renderControls(); save();
 }
 function sleep() {
   if (!canSleep()) return;
@@ -1389,16 +1668,17 @@ function hideOverlay() { ov.style.display = 'none'; }
 function renderControls() {
   if (!S) return;
   const inShift = S.slot === 'shift' && world && !world.done;
-  $('pad').style.display = inShift ? 'block' : 'none';
-  $('actBtn').style.display = inShift ? 'block' : 'none';
-  $('phoneBtn').style.display = (inShift || (S.slot !== 'title' && S.slot !== 'summary' && S.slot !== 'shift_select')) ? 'block' : 'none';
-  if (inShift) { ctrl.innerHTML = ''; return; }
-  if (S.slot === 'morning' || S.slot === 'evening') ctrl.innerHTML = `<button class="primary" data-a="phone">📱 Open phone</button>`;
-  else ctrl.innerHTML = '';
+  const world_ = inShift || S.slot === 'morning' || S.slot === 'evening', touch = matchMedia('(pointer: coarse)').matches;
+  $('pad').style.display = world_ && touch ? 'block' : 'none';
+  $('actBtn').style.display = world_ && touch ? 'block' : 'none';
+  $('phoneBtn').style.display = 'none'; ctrl.innerHTML = '';
 }
 ctrl.addEventListener('click', e => { const t = e.target.closest('[data-a]'); if (t) slotAction(t.dataset.a); });
 function updateActBtn() {
-  if (!world || world.done) return; const p = world.p, b = $('actBtn');
+  const b = $('actBtn');
+  if (S && room && (S.slot === 'morning' || S.slot === 'evening')) { const c = nearChore(), lbl = room.chore ? '…' : c ? choreLabel(c).replace(/\s*\(.*\)$/, '') : 'USE';
+    if (b.textContent !== lbl) { b.textContent = lbl; b.style.background = c ? '#27ae60' : '#2e3240'; } return; }
+  if (!world || world.done) return; const p = world.p;
   const lbl = p.handover > 0 ? 'HANDING OVER' : p.onFoot ? (Math.hypot(p.x - p.bx, p.y - p.by) < 40 ? 'GET ON BIKE' : 'WALK…') : p.speed >= 5 ? 'STOP' : 'GET OFF';
   if (b.textContent !== lbl) { b.textContent = lbl; b.style.background = lbl === 'STOP' ? '#c0392b' : lbl === 'GET OFF' ? '#2e86de' : '#27ae60'; }
 }
@@ -1419,14 +1699,15 @@ document.addEventListener('touchmove', e => { if (!e.target.closest('.pscroll,.c
 document.addEventListener('gesturestart', e => e.preventDefault());
 document.addEventListener('dblclick', e => e.preventDefault());
 window.addEventListener('keydown', e => {
-  const k = e.key.length === 1 ? e.key.toLowerCase() : e.key; keys[k] = true;
+  if (e.target.closest && e.target.closest('input,textarea')) return;
+  const k = e.key.length === 1 ? e.key.toLowerCase() : e.key; keys[k.toLowerCase()] = true;
   if (k === '`' || k === 'F2') { toggleDebug(); e.preventDefault(); }
-  else if (k === 'p' || k === 'Tab') { if (S && S.slot !== 'title') { S.phone.open ? closePhone() : openPhone(); } e.preventDefault(); }
   else if (k === 'e' || k === ' ') { action(); e.preventDefault(); }
   else if (k === 'Escape') { paused = !paused; if (paused) showOverlay('<h2>⏸ Paused</h2><p class="muted">The world and timers are frozen. Press Esc or tap to resume.</p><button class="primary" id="unp" style="width:100%">Resume</button>'), $('unp').onclick = () => { paused = false; hideOverlay(); renderPhone(true); }; else hideOverlay(); renderPhone(true); }
-  if (k.startsWith('Arrow')) e.preventDefault();
+  if (k.startsWith('Arrow') || k === ' ') e.preventDefault();
 });
-window.addEventListener('keyup', e => { keys[e.key.length === 1 ? e.key.toLowerCase() : e.key] = false; });
+window.addEventListener('keyup', e => { keys[e.key.toLowerCase()] = false; });
+window.addEventListener('blur', () => { for (const k in keys) keys[k] = false; });
 
 /* ---------- debug ---------- */
 let debugOn = false;
@@ -1482,7 +1763,7 @@ function title() {
   const saved = load();
   showOverlay(`<h2>Last Train Home</h2><p class="muted">Day 1 · Move-in. Yui's moving to Tokyo for uni. You're staying in Minase, doing HayaEats deliveries to save ${yen(C.tripTarget)} so you can visit her.</p>
     <p class="muted" style="font-size:13px">Personal prototype. Placeholder art. Progress saves on this device.</p>
-    <p class="muted" style="font-size:11px;opacity:.7" id="buildStamp">2026-10-16 07:43 BST · day1 web</p>
+    <p class="muted" style="font-size:11px;opacity:.7" id="buildStamp">2026-10-16 08:47 BST · day1 web</p>
     <div class="diff">${saved && saved.slot !== 'title' ? '<button class="primary" id="cont">Continue</button>' : ''}<button ${saved && saved.slot !== 'title' ? '' : 'class="primary"'} id="newg">New game</button></div>`);
   if ($('cont')) $('cont').onclick = () => { S = saved; resume(); };
   $('newg').onclick = () => { localStorage.removeItem(SAVE_KEY); S = newState(); hideOverlay(); toMorning(); };
@@ -1491,27 +1772,30 @@ function resume() {
   hideOverlay();
   if (S.slot === 'shift' || S.slot === 'shift_select') { S.slot = 'shift_select'; S.q = null; toShiftSelect(false); return; } // a shift restarts on reload
   if (S.slot === 'summary') { showSummary(); renderControls(); return; }
+  if (S.slot === 'morning' || S.slot === 'evening') startRoom(S.slot);
   renderPhone(true); renderControls();
 }
 
 /* ---------- main loop ---------- */
 function frame(t) {
   const dt = Math.min(0.05, (t - lastT) / 1000); lastT = t;
-  if (S && !paused && ov.style.display !== 'flex') {
+  const rotated = matchMedia('(orientation: portrait) and (max-width: 900px)').matches;
+  if (S && !paused && !rotated && ov.style.display !== 'flex') {
+    if (S.slot === 'morning' || S.slot === 'evening') tickRoom(dt);
     if (S.slot === 'morning' || S.slot === 'evening' || S.slot === 'shift') {
       S.rt += dt; if (S.slot === 'shift') tickShift(dt);
       tickQueue(dt); tickTimers(); landOutbox();
     }
   }
   if (S && S.slot === 'evening' && S.q && S.q.slot === 'evening') S.eveningQ = S.q;
-  if (world) updateActBtn();
+  updateActBtn(); renderKeyHint();
   draw();
   renderTypingPill(); uiTimer += dt; if (uiTimer > 0.25) { uiTimer = 0; renderPhone(); renderDebug(); }
   saveTimer += dt; if (saveTimer > 3) { saveTimer = 0; if (S && S.slot !== 'title') save(); }
   requestAnimationFrame(frame);
 }
 window.addEventListener('resize', resize);
-window.__game = { skipAhead, tickShift, get S() { return S; }, get world() { return world; }, answer, action, startShift, sleep, toShiftSelect, keys, joy };
+window.__game = { skipAhead, tickShift, get room() { return room; }, roomAction, get S() { return S; }, get world() { return world; }, answer, action, startShift, sleep, toShiftSelect, keys, joy };
 resize(); title(); requestAnimationFrame(frame);
 })();
 
