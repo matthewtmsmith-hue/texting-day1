@@ -7,7 +7,7 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="robots" content="noindex,nofollow">
-<meta name="tg-build" content="2026-10-16 07:31 BST · day1 web">
+<meta name="tg-build" content="2026-10-16 07:43 BST · day1 web">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <link rel="icon" href="data:,">
 <meta name="theme-color" content="#0d0f14">
@@ -20,7 +20,7 @@
   #stage.buzz1 { animation: shake .15s 1; } #stage.buzz2 { animation: shake .15s 2; } #stage.buzz3 { animation: shake .4s 2; }
   @keyframes shake { 0%,100% { transform: translate(0,0);} 25% { transform: translate(-5px,1px);} 75% { transform: translate(5px,-1px);} }
   canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; background: #2b3a2b; touch-action: none; }
-  #banner { position: absolute; top: calc(env(safe-area-inset-top) + 92px); left: 8px; right: 8px; background: rgba(20,20,28,.96); border: 1px solid #444; border-radius: 14px; padding: 10px 14px; display: none; z-index: 30; }
+  #banner { position: absolute; top: calc(env(safe-area-inset-top) + 112px); left: 8px; right: 8px; background: rgba(20,20,28,.96); border: 1px solid #444; border-radius: 14px; padding: 10px 14px; display: none; z-index: 30; }
   #banner b { color: #f7a1c4; }
   #controls { position: absolute; left: 0; right: 0; bottom: calc(env(safe-area-inset-bottom) + 10px); display: flex; gap: 10px; z-index: 6; justify-content: center; flex-wrap: wrap; padding: 0 10px; }
   button { background: #2e3240; color: #eee; border: 1px solid #4a5068; border-radius: 12px; padding: 12px 16px; min-height: 48px; cursor: pointer; font: inherit; touch-action: manipulation; }
@@ -81,7 +81,7 @@
   @keyframes dot { 0%,60%,100% { transform: translateY(0); opacity: .45; } 30% { transform: translateY(-4px); opacity: 1; } }
   .typingb { display: inline-flex; gap: 5px; padding: 12px 16px; width: auto; }
   .tyhint { margin: 0 20px 14px; padding: 10px 14px; background: #1d2230; border-radius: 14px; color: #cfd3e0; }
-  #typingPill { position: absolute; top: calc(env(safe-area-inset-top) + 56px); left: 50%; transform: translateX(-50%); background: rgba(20,20,28,.9); border: 1px solid #444; border-radius: 16px; padding: 5px 12px; font-size: 13px; z-index: 22; display: none; pointer-events: none; white-space: nowrap; }
+  #typingPill { position: absolute; top: calc(env(safe-area-inset-top) + 82px); left: 50%; transform: translateX(-50%); background: rgba(20,20,28,.9); border: 1px solid #444; border-radius: 16px; padding: 5px 12px; font-size: 13px; z-index: 22; display: none; pointer-events: none; white-space: nowrap; }
 </style>
 
 <style id="ios-fs-hide">
@@ -158,11 +158,14 @@ window.GAME_DATA = {
     startMeters: { L: 60, I: 70, E: 0, N: 0 },
     impatience: [ {min: 3, text: "??"}, {min: 8, text: "hello"}, {min: 15, text: "wow ok"},
                   {min: 25, text: "fine I'll just go help Rika with dinner then 🙄"} ],
-    bikeMaxSpeed: 180, walkSpeed: 75,
+    // Riding (px/s, 40 px tiles). Tuned on the Minase map so Easy ≈ 60–70 s, Medium ≈ 85–100 s, Hard ≈ 105–125 s
+    // for a clean run with no phone stops (see report). legTiles = path distance band (tiles) between stops.
+    bikeMaxSpeed: 130, bikeAccel: 170, bikeTurnRate: 4.2, bikeCornerBrake: 260, walkSpeed: 70, handoverSec: 1.4,
+    firstLegScale: 0.6,   // leg 1 starts at the central hub, so its band is scaled down
     difficulties: {
-      easy:   { label: "Easy",   desc: "One neighbourhood", par: 22, maxPay: 1300, leg: [1000, 1500] },
-      medium: { label: "Medium", desc: "Across town",       par: 26, maxPay: 2400, leg: [2000, 2700] },
-      hard:   { label: "Hard",   desc: "Edge to edge, hills, station rush", par: 32, maxPay: 3800, leg: [3300, 4300] }
+      easy:   { label: "Easy",   desc: "One neighbourhood", par: 22, maxPay: 1300, legTiles: [36, 50] },
+      medium: { label: "Medium", desc: "Across town",       par: 26, maxPay: 2400, legTiles: [62, 78] },
+      hard:   { label: "Hard",   desc: "Edge to edge, hills, station rush", par: 32, maxPay: 3800, legTiles: [84, 112] }
     },
     lateShift: { mult: 0.6, N: 3 }
   },
@@ -333,6 +336,458 @@ window.DAYS[1] = {
                  { text: "night", reply: ["night"] } ] }
   ] }
 };
+
+</script>
+<script>
+// Minase town map (hand-laid tile map). 1 char = 1 tile (40 px). Edit the ASCII directly.
+// Legend:  . grass   , river bank   = road   # bridge   : pavement   ~ river   - rail   + level crossing   % rail bridge
+//          f rice field   _ footpath   P parking   G park lawn   o pond   l platform   T tree   v vending machine   I torii
+//          h house   a danchi (apartments)   k konbini   s shop   S station   X HayaEats hub   j shrine
+//          @ customer door spot (walkable tile in front of a door)   * hub pickup spot / start
+// Door names below are matched to '@' tiles in reading order (top-to-bottom, left-to-right).
+window.MINASE_MAP = {
+  tile: 40,
+  rows: [
+"T.T..:==:...T....T...:==:..T....T.T..:==:.T..,~~~~,TT:==:T....T..:==:...",
+"..T..:==:...T....T...:==:..T....T....:==:.T..T~~~~T.T:==:T....T..:==:...",
+"------++--------------++--------------++------%%%%----++----------++----",
+"------++--------------++--------------++------%%%%----++----------++----",
+".hhh.:==:hhh.hhh.hhh.:==:llllllllllll:==:hhh.,~~~~,..:==:hhh.hhh.:==:fff",
+".hhh.:==:hhh.hhh.hhh.:==:..SSSSSSSS..:==:hhh.T~~~~T..:==:hhh.hhh.:==:fff",
+".hhh.:==:hhh.hhh.hhh.:==:v.SSSSSSSS..v==:hhh.,~~~~,TT:==:hhh.hhh.:==:fff",
+"::@:::==::@:::@:::@:::==::::::::::::::==::@:::~~~~::::==::@:::@:::==::::",
+"=============================================######=====================",
+"=============================================######=====================",
+"::@:::==::@:::@:::@:::==::@:::@:::@:::==::::::~~~~::::==::@:::@:::==::::",
+".hhh.:==:hhh.hhh.hhh.:==:hhh.hhh.hhh.:==:....,~~~~,..:==:hhh.hhh.:==:fff",
+".hhh.:==:hhh.hhh.hhh.:==:hhh.hhh.hhh.:==:jjjj,~~~~,TT:==:hhh.hhh.:==:fff",
+".hhh.:==:hhh.hhh.hhh.:==:hhh.hhh.hhh.:==:jjjjT~~~~T..:==:hhh.hhh.:==:fff",
+".....:==:............:==:............:==:jjjj,~~~~,..:==:........:==:fff",
+".....:==:..T.........:==:...T........:==:.@..,~~~~,TT:==:.....T..:==:fff",
+".....:==:.....T......:==:......T.....:==:._..,~~~~,..:==:........:==:fff",
+"T....:==:............:==:.........T..:==:.I..T~~~~T..:==:........:==:fff",
+"...T.:==:kkkkkTPPPPPP:==:............:==:._..,~~~~,TT:==:........:==:fff",
+".....:==:kkkkk.PPPPPP:==:sss.sss.ssss:==:._..,~~~~,..:==:........:==:fff",
+".hhh.:==:kkkkk.PPPPPP:==:sss.sss.ssss:==:._..,~~~~,..:==:hhh.hhh.:==:fff",
+".hhh.:==:kkkkk.PPPPPP:==:sss.sss.ssss:==:._..T~~~~TTT:==:hhh.hhh.:==:fff",
+".hhh.:==:kkkkkvPPPPPP:==:sss.sss.ssss:==:._..,~~~~,..:==:hhh.hhh.:==:fff",
+"::@:::==::::::::::::::==::@:::@:::@:::==::::::~~~~::::==::@:::@:::==::::",
+"=============================================######=====================",
+"=============================================######=====================",
+"::@:::==::::::::::::::==:::*::::@::@::==::@:::~~~~::::==::::::::::==::::",
+".hhh.:==:............:==:XXXXX.sss.ss:==:hhh.,~~~~,TT:==:........:==:fff",
+".hhh.:==:.aaaaaaaaaa.:==:XXXXX.sss.ss:==:hhh.,~~~~,..:==:.aaaaaa.:==:fff",
+".hhh.:==:.aaaaaaaaaa.:==:XXXXX.sss.ss:==:hhh.T~~~~T..:==:.aaaaaa.:==:fff",
+".....:==:.aaaaaaaaaa.:==:XXXXX.sss.ss:==:....,~~~~,TT:==:.aaaaaa.:==:fff",
+".....:==:...@....@...:==:............:==:.T..,~~~~,..:==:..@..@..:==:fff",
+".....:==:............:==:...T........:==:....,~~~~,..:==:........:==:fff",
+".....:==:............:==:......T.....:==:....T~~~~TTT:==:........:==:fff",
+"T....:==:.aaaaaaaaaa.:==:.........T..:==:....,~~~~,..:==:.aaaaaa.:==:fff",
+".....:==:.aaaaaaaaaa.:==:............:==:....,~~~~,..:==:.aaaaaa.:==:fff",
+".hhh.:==:.aaaaaaaaaa.:==:hhh.hhh.hhh.:==:hhh.,~~~~,TT:==:.aaaaaa.:==:fff",
+".hhh.:==:...@....@...:==:hhh.hhh.hhh.:==:hhh.T~~~~T..:==:..@..@..:==:fff",
+".hhh.:==:............:==:hhh.hhh.hhh.:==:hhh.,~~~~,..:==:........:==:fff",
+"::@:::==::::::::::::::==::@:::@:::@:::==::@:::~~~~::::==::::::::::==::::",
+"=============================================######=====================",
+"=============================================######=====================",
+"::@:::==::@:::@:::@:::==::::::::::::::==::@:::~~~~::::==::::::::::==::::",
+".hhh.:==:hhh.hhh.hhh.:==:GGG_GGGGGGGG:==:hhh.,~~~~,..:==:ffffffff:==:fff",
+".hhh.:==:hhh.hhh.hhh.:==:GTG_GTGGTTGG:==:hhh.,~~~~,..:==:ffffffff:==:fff",
+".hhh.:==:hhh.hhh.hhh.:==:GGG_GGGGGGGT:==:hhh.T~~~~TTT:==:ffffffff:==:fff",
+".....:==:............:==:GGG_GooooGGG:==:....,~~~~,..:==:ffffffff:==:fff",
+".hhh.:==:hhh.hhh.hhh.:==:TGG_GooooGGG:==:hhh.,~~~~,..:==:ffffffff:==:fff",
+".hhh.:==:hhh.hhh.hhh.:==:GGG_GooooGGG:==:hhh.,~~~~,TT:==:ffffffff:==:fff",
+".hhh.:==:hhh.hhh.hhh.:==:____________:==:hhh.T~~~~T..:==:ffffffff:==:fff",
+"..@..:==:.@...@...@..:==:TGG_GGGGGGTG:==:.@..,~~~~,..:==:ffffffff:==:fff",
+"T....:==:............:==:GTG_GGTGGGGT:==:....,~~~~,TT:==:ffffffff:==:fff"
+],
+  doors: [{"name": "Abe house", "kind": "house"}, {"name": "Shimizu house", "kind": "house"}, {"name": "Yamazaki house", "kind": "house"}, {"name": "Mori house", "kind": "house"}, {"name": "Ikeda house", "kind": "house"}, {"name": "Hashimoto house", "kind": "house"}, {"name": "Ishikawa house", "kind": "house"}, {"name": "Sasaki house", "kind": "house"}, {"name": "Tanaka house", "kind": "house"}, {"name": "Watanabe house", "kind": "house"}, {"name": "Ito house", "kind": "house"}, {"name": "Sato house", "kind": "house"}, {"name": "Suzuki house", "kind": "house"}, {"name": "Takahashi house", "kind": "house"}, {"name": "Kondo house", "kind": "house"}, {"name": "Ishii house", "kind": "house"}, {"name": "Minase Shrine office", "kind": "shrine"}, {"name": "Yamaguchi house", "kind": "house"}, {"name": "Kimura Bakery", "kind": "shop"}, {"name": "Hanaya Florist", "kind": "shop"}, {"name": "Ramen Daruma", "kind": "shop"}, {"name": "Sakamoto house", "kind": "house"}, {"name": "Endo house", "kind": "house"}, {"name": "Matsumoto house", "kind": "house"}, {"name": "Minase Izakaya", "kind": "shop"}, {"name": "Kissa Komorebi", "kind": "shop"}, {"name": "Okada house", "kind": "house"}, {"name": "Minase Danchi 1-102", "kind": "danchi"}, {"name": "Minase Danchi 1-203", "kind": "danchi"}, {"name": "Kawabata Danchi 3-103", "kind": "danchi"}, {"name": "Kawabata Danchi 3-204", "kind": "danchi"}, {"name": "Minase Danchi 2-102", "kind": "danchi"}, {"name": "Minase Danchi 2-203", "kind": "danchi"}, {"name": "Kawabata Danchi 4-103", "kind": "danchi"}, {"name": "Kawabata Danchi 4-204", "kind": "danchi"}, {"name": "Inoue house", "kind": "house"}, {"name": "Ogawa house", "kind": "house"}, {"name": "Maeda house", "kind": "house"}, {"name": "Fujita house", "kind": "house"}, {"name": "Goto house", "kind": "house"}, {"name": "Kimura house", "kind": "house"}, {"name": "Yamamoto house", "kind": "house"}, {"name": "Nakamura house", "kind": "house"}, {"name": "Kobayashi house", "kind": "house"}, {"name": "Hasegawa house", "kind": "house"}, {"name": "Hayashi house", "kind": "house"}, {"name": "Kato house", "kind": "house"}, {"name": "Yoshida house", "kind": "house"}, {"name": "Yamada house", "kind": "house"}, {"name": "Murakami house", "kind": "house"}]
+};
+
+</script>
+<script>
+/* Minase town: tile map parsing, collision, path distances, and all code-drawn art (no image files).
+   Reads window.MINASE_MAP (data/minase_map.js). Exposes window.Town. */
+(function () {
+'use strict';
+const M = window.MINASE_MAP, TS = M.tile, ROWS = M.rows, H = ROWS.length, W = ROWS[0].length;
+const PW = W * TS, PH = H * TS;
+const at = (x, y) => (x < 0 || y < 0 || x >= W || y >= H) ? 'X' : ROWS[y][x];
+const SOLID = new Set('hakSXjTvlo~-%'.split('')); SOLID.delete('P');
+const BLD = 'hakSsXj';
+const isSolid = c => SOLID.has(c) || BLD.includes(c);
+const ROADY = c => c === '=' || c === '#' || c === '+';
+const hash = (x, y, s = 0) => { let h = (x * 374761393 + y * 668265263 + s * 2147483647) | 0; h = (h ^ (h >>> 13)) * 1274126177; return ((h ^ (h >>> 16)) >>> 0) / 4294967296; };
+
+/* ---- parse buildings (connected components of one letter) ---- */
+const seen = new Uint8Array(W * H), buildings = [];
+for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
+  const c = at(x, y); if (!BLD.includes(c) || seen[y * W + x]) continue;
+  let x0 = x, x1 = x, y0 = y, y1 = y; const st = [[x, y]]; seen[y * W + x] = 1;
+  while (st.length) { const [a, b] = st.pop(); x0 = Math.min(x0, a); x1 = Math.max(x1, a); y0 = Math.min(y0, b); y1 = Math.max(y1, b);
+    for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) { const nx = a + dx, ny = b + dy; if (at(nx, ny) === c && !seen[ny * W + nx]) { seen[ny * W + nx] = 1; st.push([nx, ny]); } } }
+  buildings.push({ c, x0, y0, x1, y1, i: buildings.length, doors: [] });
+}
+const bAt = (x, y) => buildings.find(b => x >= b.x0 && x <= b.x1 && y >= b.y0 && y <= b.y1);
+/* ---- doors, spawn, props ---- */
+const doors = []; let spawn = null; const trees = [], vend = [], toriis = [], poles = [];
+for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
+  const c = at(x, y);
+  if (c === '@') {
+    const meta = M.doors[doors.length] || { name: 'Customer', kind: 'house' };
+    let face = null, bld = null;
+    for (const [dx, dy, f] of [[0, -1, 'n'], [0, 1, 's'], [-1, 0, 'w'], [1, 0, 'e']]) { const b = bAt(x + dx, y + dy); if (b) { bld = b; face = f; break; } }
+    const d = { tx: x, ty: y, x: x * TS + TS / 2, y: y * TS + TS / 2, name: meta.name, kind: meta.kind, face, b: bld };
+    // nudge the spot toward the door so it reads as "at the door"
+    if (face === 'n') d.y -= 8; if (face === 's') d.y += 8; if (face === 'w') d.x -= 8; if (face === 'e') d.x += 8;
+    doors.push(d); if (bld) bld.doors.push(d);
+  }
+  if (c === '*') spawn = { tx: x, ty: y, x: x * TS + TS / 2, y: y * TS + TS / 2 + 4 };
+  if (c === 'T') trees.push({ x: x * TS + TS / 2, y: y * TS + TS / 2, sakura: at(x, y) === 'T' && (ROWS[y].slice(Math.max(0, x - 2), x + 3).includes('G') || hash(x, y) < 0.12), r: 15 + hash(x, y, 3) * 5 });
+  if (c === 'v') vend.push({ x: x * TS + TS / 2, y: y * TS + TS / 2 });
+  if (c === 'I') toriis.push({ x: x * TS + TS / 2, y: y * TS + TS / 2 });
+}
+// power poles along the outer edge of pavements, every 6 tiles
+const poleLines = [];
+{
+  const rows = [], cols = [];
+  for (let y = 0; y < H; y++) { let n = 0; for (let x = 0; x < W; x++) if (at(x, y) === '=') n++; if (n > W * 0.6) rows.push(y); }
+  for (let x = 0; x < W; x++) { let n = 0; for (let y = 0; y < H; y++) if (at(x, y) === '=') n++; if (n > H * 0.6) cols.push(x); }
+  Town_rows = rows; Town_cols = cols;
+  for (const y of rows) if (!rows.includes(y - 1)) { const line = []; for (let x = 2; x < W; x += 6) if (at(x, y - 1) === ':' || at(x, y - 1) === '@') line.push({ x: x * TS + 20, y: (y - 1) * TS + 6 }); poleLines.push(line); line.forEach(p => poles.push(p)); }
+  for (const x of cols) if (!cols.includes(x + 1)) { const line = []; for (let y = 4; y < H; y += 6) if (at(x + 1, y) === ':') line.push({ x: (x + 1) * TS + 34, y: y * TS + 20 }); poleLines.push(line); line.forEach(p => poles.push(p)); }
+}
+var Town_rows, Town_cols;
+const HROWS = new Set(Town_rows), VCOLS = new Set(Town_cols);
+
+/* ---- movement ---- */
+const tileAt = (px, py) => at(Math.floor(px / TS), Math.floor(py / TS));
+function blockedAt(px, py, r) {
+  for (const [ox, oy] of [[-r, -r], [r, -r], [-r, r], [r, r], [0, -r], [0, r], [-r, 0], [r, 0]]) if (isSolid(tileAt(px + ox, py + oy))) return true;
+  return false;
+}
+function move(p, dx, dy, r) { // axis-separated slide; returns true if it bumped
+  let bump = false;
+  if (!blockedAt(p.x + dx, p.y, r)) p.x += dx; else bump = true;
+  if (!blockedAt(p.x, p.y + dy, r)) p.y += dy; else bump = true;
+  p.x = Math.max(r, Math.min(PW - r, p.x)); p.y = Math.max(r, Math.min(PH - r, p.y));
+  return bump;
+}
+const BIKE_MULT = { '=': 1, '#': 1, '+': 0.8, ':': 0.72, '@': 0.72, '*': 0.72, 'P': 0.85, '_': 0.6, '.': 0.42, ',': 0.42, 'G': 0.45, 'f': 0.3 };
+function speedMult(px, py, onFoot) { const c = tileAt(px, py); return onFoot ? (c === 'f' ? 0.7 : 1) : (BIKE_MULT[c] ?? 0.5); }
+/* ---- path distance (tiles) ---- */
+const distCache = new Map();
+function distFrom(tx, ty) {
+  const k = ty * W + tx; if (distCache.has(k)) return distCache.get(k);
+  const d = new Int16Array(W * H).fill(-1), q = [k]; d[k] = 0;
+  for (let i = 0; i < q.length; i++) { const c = q[i], x = c % W, y = (c / W) | 0;
+    for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) { const nx = x + dx, ny = y + dy; if (nx < 0 || ny < 0 || nx >= W || ny >= H) continue; const n = ny * W + nx; if (d[n] >= 0 || isSolid(at(nx, ny))) continue; d[n] = d[c] + 1; q.push(n); } }
+  distCache.set(k, d); return d;
+}
+function pickJobs(band0, rnd, firstScale) {
+  const out = []; let from = spawn;
+  for (let i = 0; i < 3; i++) {
+    const band = i === 0 ? band0.map(v => Math.round(v * (firstScale || 0.55))) : band0; // the hub is central, so leg 1 is shorter
+    const d = distFrom(from.tx, from.ty);
+    const ok = doors.filter(o => !out.includes(o) && d[o.ty * W + o.tx] >= band[0] && d[o.ty * W + o.tx] <= band[1]);
+    let pick = ok.length ? ok[Math.floor(rnd() * ok.length)] : null;
+    if (!pick) { const mid = (band[0] + band[1]) / 2; pick = doors.filter(o => !out.includes(o) && d[o.ty * W + o.tx] > 0).sort((a, b) => Math.abs(d[a.ty * W + a.tx] - mid) - Math.abs(d[b.ty * W + b.tx] - mid))[0]; }
+    pick.pathTiles = d[pick.ty * W + pick.tx]; out.push(pick); from = pick;
+  }
+  return out;
+}
+
+/* ================= ART ================= */
+const PAL = { grass: '#9fd27a', grass2: '#8cc56b', bank: '#a9cf86', asph: '#5c616d', asph2: '#646a77', pave: '#e6dfd0', pave2: '#d6cdbb', curb: '#b8ae9a',
+  water: '#5fb0e0', water2: '#86cdf0', field: '#bfe08a', field2: '#a3cd6c', path: '#eadbb6', lawn: '#93cf72', line: '#f7f4ea' };
+const ROOFS = ['#3f5675', '#b4553f', '#4b8a88', '#4a4e5c', '#7a5a8c', '#a0763c', '#5d7f4a'];
+function rr(c, x, y, w, h, r) { c.beginPath(); c.moveTo(x + r, y); c.arcTo(x + w, y, x + w, y + h, r); c.arcTo(x + w, y + h, x, y + h, r); c.arcTo(x, y + h, x, y, r); c.arcTo(x, y, x + w, y, r); c.closePath(); }
+function shade(hex, f) { const n = parseInt(hex.slice(1), 16); let r = n >> 16, g = (n >> 8) & 255, b = n & 255;
+  if (f > 0) { r += (255 - r) * f; g += (255 - g) * f; b += (255 - b) * f; } else { r *= 1 + f; g *= 1 + f; b *= 1 + f; }
+  return `rgb(${r | 0},${g | 0},${b | 0})`; }
+function drawTile(c, x, y) {
+  const t = at(x, y), X = x * TS, Y = y * TS;
+  const base = { '.': PAL.grass, ',': PAL.bank, '=': PAL.asph, '#': PAL.asph, '+': PAL.asph, ':': PAL.pave, '@': PAL.pave, '*': PAL.pave, '~': PAL.water, 'o': PAL.water,
+    '-': '#a2968a', '%': '#a2968a', 'f': PAL.field, '_': PAL.path, 'P': '#70757f', 'G': PAL.lawn, 'l': '#d5d5d0', 'T': null, 'v': null, 'I': PAL.path };
+  let col = base[t];
+  if (col === undefined) col = '#d9d0bd'; // under buildings
+  if (col === null) { // props sit on whatever is around them
+    const n = [at(x - 1, y), at(x + 1, y), at(x, y - 1), at(x, y + 1)];
+    col = n.some(k => k === ':' || k === '@') ? PAL.pave : n.includes('G') ? PAL.lawn : n.includes(',') ? PAL.bank : PAL.grass;
+  }
+  c.fillStyle = col; c.fillRect(X, Y, TS + 0.5, TS + 0.5);
+  if (t === '.' || t === 'G' || t === ',' || col === PAL.grass) { // grass tufts
+    c.strokeStyle = 'rgba(60,120,50,.35)'; c.lineWidth = 1.2;
+    for (let i = 0; i < 4; i++) { const a = X + hash(x, y, i) * TS, b = Y + hash(x, y, i + 9) * TS; c.beginPath(); c.moveTo(a, b); c.lineTo(a - 2, b - 4); c.moveTo(a, b); c.lineTo(a + 2, b - 4); c.stroke(); }
+    if (hash(x, y, 77) < 0.08) { c.fillStyle = hash(x, y, 5) < .5 ? '#fff6a8' : '#ffd0e0'; c.beginPath(); c.arc(X + 10 + hash(x, y, 6) * 20, Y + 10 + hash(x, y, 8) * 20, 2.2, 0, 7); c.fill(); }
+  }
+  if (t === '=' || t === '#' || t === '+' || t === 'P') { // asphalt speckle
+    c.fillStyle = 'rgba(255,255,255,.05)'; for (let i = 0; i < 6; i++) c.fillRect(X + hash(x, y, i) * TS, Y + hash(x, y, i + 20) * TS, 2, 2);
+  }
+  if (t === ':' || t === '@' || t === '*') { // paving slabs + curb on the road side
+    c.strokeStyle = PAL.pave2; c.lineWidth = 1; c.beginPath();
+    for (let k = 0; k <= TS; k += 20) { c.moveTo(X + k, Y); c.lineTo(X + k, Y + TS); c.moveTo(X, Y + k); c.lineTo(X + TS, Y + k); } c.stroke();
+    c.fillStyle = PAL.curb;
+    if (ROADY(at(x, y + 1))) c.fillRect(X, Y + TS - 4, TS, 4); if (ROADY(at(x, y - 1))) c.fillRect(X, Y, TS, 4);
+    if (ROADY(at(x + 1, y))) c.fillRect(X + TS - 4, Y, 4, TS); if (ROADY(at(x - 1, y))) c.fillRect(X, Y, 4, TS);
+  }
+  if (t === '~' || t === 'o') {
+    c.strokeStyle = 'rgba(255,255,255,.35)'; c.lineWidth = 1.5;
+    for (let i = 0; i < 2; i++) { const a = X + 6 + hash(x, y, i) * 24, b = Y + 8 + hash(x, y, i + 4) * 24; c.beginPath(); c.arc(a, b, 5, Math.PI * 1.1, Math.PI * 1.9); c.stroke(); }
+    // stone edge next to land
+    c.fillStyle = '#9aa3a8';
+    if (!'~o#%'.includes(at(x - 1, y))) c.fillRect(X, Y, 4, TS); if (!'~o#%'.includes(at(x + 1, y))) c.fillRect(X + TS - 4, Y, 4, TS);
+    if (!'~o#%'.includes(at(x, y - 1))) c.fillRect(X, Y, TS, 4); if (!'~o#%'.includes(at(x, y + 1))) c.fillRect(X, Y + TS - 4, TS, 4);
+  }
+  if (t === '-' || t === '%' || t === '+') { // rails run horizontally
+    if (t === '%') { c.fillStyle = PAL.water; c.fillRect(X, Y, TS, TS); c.fillStyle = '#7d7f86'; c.fillRect(X, Y + 4, TS, TS - 8); }
+    const top = at(x, y - 1) !== at(x, y) && !'-%+'.includes(at(x, y - 1));
+    if (t !== '+') { c.fillStyle = '#6e5644'; for (let k = 2; k < TS; k += 10) c.fillRect(X + k, Y + (top ? 10 : 0), 5, top ? 30 : 30); }
+    c.fillStyle = '#d0d4da'; const ry = top ? [Y + 16, Y + 34] : [Y + 6, Y + 24];
+    ry.forEach(v => c.fillRect(X, v, TS, 3));
+    if (t === '+') { c.fillStyle = 'rgba(0,0,0,.25)'; ry.forEach(v => c.fillRect(X, v + 3, TS, 1)); }
+  }
+  if (t === 'f') { // rice paddy rows with a little water sheen
+    c.fillStyle = 'rgba(110,170,210,.25)'; c.fillRect(X + 2, Y + 2, TS - 4, TS - 4);
+    c.fillStyle = PAL.field2; for (let k = 4; k < TS; k += 8) for (let j = 4; j < TS; j += 8) c.fillRect(X + j, Y + k, 3, 3);
+    c.fillStyle = '#c9b48a'; if (at(x, y - 1) !== 'f') c.fillRect(X, Y, TS, 3); if (at(x - 1, y) !== 'f') c.fillRect(X, Y, 3, TS);
+  }
+  if (t === 'P') { c.fillStyle = PAL.line; c.fillRect(X, Y + 2, 2, TS - 4); if (y % 2 === 0) c.fillRect(X, Y, TS, 2); }
+  if (t === '_' || t === 'I') { c.fillStyle = 'rgba(150,120,80,.25)'; for (let i = 0; i < 7; i++) c.fillRect(X + hash(x, y, i) * TS, Y + hash(x, y, i + 3) * TS, 2, 2); }
+  if (t === 'l') { c.fillStyle = '#f2c94c'; c.fillRect(X, Y + 4, TS, 5); c.fillStyle = '#bdbdb5'; c.fillRect(X, Y + TS - 3, TS, 3); }
+  if (t === '#') { // bridge deck rails
+    c.fillStyle = '#c94f3c'; if (!'=#'.includes(at(x, y - 1))) c.fillRect(X, Y, TS, 5); if (!'=#'.includes(at(x, y + 1))) c.fillRect(X, Y + TS - 5, TS, 5);
+    c.fillStyle = '#8a3a2c'; for (let k = 0; k < TS; k += 10) { if (!'=#'.includes(at(x, y - 1))) c.fillRect(X + k, Y, 3, 7); if (!'=#'.includes(at(x, y + 1))) c.fillRect(X + k, Y + TS - 7, 3, 7); }
+  }
+}
+function drawMarkings(c, x, y) {
+  const t = at(x, y); if (t !== '=' && t !== '#' && t !== '+') return;
+  const X = x * TS, Y = y * TS, inH = HROWS.has(y), inV = VCOLS.has(x);
+  c.fillStyle = PAL.line;
+  if (inH && !inV && HROWS.has(y + 1) && !HROWS.has(y - 1)) for (let k = 4; k < TS; k += 20) c.fillRect(X + k, Y + TS - 1.5, 10, 3); // centre dashes
+  if (inV && !inH && VCOLS.has(x + 1) && !VCOLS.has(x - 1)) for (let k = 4; k < TS; k += 20) c.fillRect(X + TS - 1.5, Y + k, 3, 10);
+  // zebra crossings just outside each intersection
+  if (inH && !inV && (VCOLS.has(x + 1) || VCOLS.has(x - 1)) && t === '=') { c.fillStyle = 'rgba(247,244,234,.9)'; for (let k = 3; k < TS; k += 8) c.fillRect(X + 8, Y + k, TS - 16, 4); }
+  if (inV && !inH && (HROWS.has(y + 1) || HROWS.has(y - 1)) && t === '=') { c.fillStyle = 'rgba(247,244,234,.9)'; for (let k = 3; k < TS; k += 8) c.fillRect(X + k, Y + 8, 4, TS - 16); }
+  // 止まれ-style stop line before the crossing (vertical roads, south-bound lane)
+  if (inV && !inH && HROWS.has(y + 2) && !VCOLS.has(x - 1)) { c.fillStyle = PAL.line; c.fillRect(X + 2, Y + TS - 4, TS - 4, 3); }
+}
+function bShadow(c, b) { const X = b.x0 * TS, Y = b.y0 * TS, w = (b.x1 - b.x0 + 1) * TS, h = (b.y1 - b.y0 + 1) * TS; c.fillStyle = 'rgba(30,40,30,.22)'; rr(c, X + 7, Y + 9, w, h, 6); c.fill(); }
+function drawDoorsOf(c, b) {
+  for (const d of b.doors) { const bx = d.tx * TS + TS / 2, by = d.ty * TS + TS / 2; c.fillStyle = '#7a5236';
+    if (d.face === 'n') c.fillRect(bx - 7, by - TS / 2 - 3, 14, 5); if (d.face === 's') c.fillRect(bx - 7, by - TS / 2 - 2, 14, 5);
+    if (d.face === 'w') c.fillRect(bx - TS / 2 - 3, by - 7, 5, 14); if (d.face === 'e') c.fillRect(bx + TS / 2 - 2, by - 7, 5, 14); }
+}
+function drawBuilding(c, b) {
+  const X = b.x0 * TS + 2, Y = b.y0 * TS + 2, w = (b.x1 - b.x0 + 1) * TS - 4, h = (b.y1 - b.y0 + 1) * TS - 4, cx = X + w / 2, cy = Y + h / 2;
+  const v = hash(b.x0, b.y0, 1);
+  if (b.c === 'h') { // pitched kawara roof, ridge along x
+    const col = ROOFS[Math.floor(v * ROOFS.length)];
+    c.fillStyle = '#f2e8d5'; rr(c, X, Y + 4, w, h, 4); c.fill(); // walls peeking out
+    c.fillStyle = shade(col, 0.18); rr(c, X - 2, Y - 2, w + 4, h / 2 + 3, 4); c.fill();
+    c.fillStyle = shade(col, -0.12); rr(c, X - 2, cy, w + 4, h / 2 - 2, 4); c.fill();
+    c.strokeStyle = 'rgba(0,0,0,.12)'; c.lineWidth = 1; c.beginPath(); for (let k = Y + 4; k < Y + h - 4; k += 5) { c.moveTo(X, k); c.lineTo(X + w, k); } c.stroke();
+    c.fillStyle = shade(col, 0.35); c.fillRect(X - 1, cy - 2, w + 2, 4); // ridge
+    if (v > 0.55) { c.fillStyle = '#26324a'; c.fillRect(X + w * 0.15, cy + 5, w * 0.4, h * 0.3); c.strokeStyle = '#6f84a8'; c.beginPath(); c.moveTo(X + w * 0.35, cy + 5); c.lineTo(X + w * 0.35, cy + 5 + h * 0.3); c.stroke(); }
+    if (v < 0.25) { c.fillStyle = '#8b8b8b'; c.fillRect(X + w * 0.7, Y + 6, 8, 8); }
+    c.strokeStyle = shade(col, -0.35); c.lineWidth = 1.5; rr(c, X - 2, Y - 2, w + 4, h, 4); c.stroke();
+  } else if (b.c === 'a') { // danchi: flat roof, balconies on the south side, rooftop tanks
+    c.fillStyle = '#eef0f3'; rr(c, X, Y, w, h, 3); c.fill();
+    c.fillStyle = '#d3d8e0'; c.fillRect(X + 4, Y + 4, w - 8, h - 14);
+    c.fillStyle = '#aab3bf'; for (let k = X + 6; k < X + w - 10; k += 22) c.fillRect(k, Y + h - 9, 16, 6);
+    c.fillStyle = '#9fb7cf'; c.beginPath(); c.arc(X + 20, Y + 18, 9, 0, 7); c.fill(); c.strokeStyle = '#6e8399'; c.stroke();
+    c.fillStyle = '#c0c5cc'; c.fillRect(X + w - 40, Y + 10, 14, 10); c.fillRect(X + w - 22, Y + 10, 14, 10);
+    c.fillStyle = '#5b6573'; c.font = '700 13px system-ui'; c.textAlign = 'center'; c.fillText(b.doors[0] ? b.doors[0].name.replace(/-.*$/, '').replace(/.* /, '') + '号棟' : '', cx + 10, cy + 2);
+    c.strokeStyle = '#9aa2ad'; c.lineWidth = 1.5; rr(c, X, Y, w, h, 3); c.stroke();
+  } else if (b.c === 'k') { // konbini
+    c.fillStyle = '#f7f7f5'; rr(c, X, Y, w, h, 4); c.fill();
+    const sy = Y + h - 16; ['#2e9e5b', '#f39c32', '#2f6fd1'].forEach((col, i) => { c.fillStyle = col; c.fillRect(X, sy + i * 5, w, 5); });
+    c.fillStyle = '#d7dbe0'; for (let k = X + 10; k < X + w - 10; k += 26) c.fillRect(k, Y + 12, 14, 10);
+    c.fillStyle = '#2f6fd1'; c.font = '800 13px system-ui'; c.textAlign = 'center'; c.fillText('MINASE MART', cx, cy + 4);
+    c.strokeStyle = '#b5bac2'; c.lineWidth = 1.5; rr(c, X, Y, w, h, 4); c.stroke();
+  } else if (b.c === 's') { // shop with striped awning on the door side
+    const cols = ['#e9b36b', '#d98c8c', '#9cc0a8', '#c3a6d6', '#e8d27a']; const col = cols[Math.floor(v * cols.length)];
+    c.fillStyle = col; rr(c, X, Y, w, h, 4); c.fill(); c.fillStyle = shade(col, -0.1); c.fillRect(X + 5, Y + 5, w - 10, h - 10);
+    const face = b.doors[0] ? b.doors[0].face : 's', aw = ['#e74c3c', '#ffffff'];
+    for (let k = 0; k < w; k += 8) { c.fillStyle = aw[(k / 8) % 2]; if (face === 's') c.fillRect(X + k, Y + h - 10, 8, 12); else c.fillRect(X + k, Y - 2, 8, 12); }
+    const nm = b.doors[0] ? b.doors[0].name : ''; const sign = /Bakery/.test(nm) ? '🥐' : /Flor/.test(nm) ? '💐' : /Ramen/.test(nm) ? '🍜' : /Book/.test(nm) ? '📚' : /Izakaya/.test(nm) ? '🏮' : /Kissa/.test(nm) ? '☕' : '🏪';
+    c.font = '18px system-ui'; c.textAlign = 'center'; c.fillText(sign, cx, cy + 6);
+    c.strokeStyle = shade(col, -0.35); c.lineWidth = 1.5; rr(c, X, Y, w, h, 4); c.stroke();
+  } else if (b.c === 'S') { // station
+    c.fillStyle = '#35666b'; rr(c, X - 2, Y - 2, w + 4, h + 4, 5); c.fill(); c.fillStyle = '#427b80'; c.fillRect(X, Y, w, h / 2);
+    c.fillStyle = '#f5f2e8'; rr(c, cx - 70, cy - 11, 140, 22, 5); c.fill();
+    c.fillStyle = '#2b4d50'; c.font = '700 13px system-ui'; c.textAlign = 'center'; c.fillText('水瀬駅  MINASE STN', cx, cy + 5);
+  } else if (b.c === 'X') { // HayaEats hub
+    c.fillStyle = '#ff7a45'; rr(c, X, Y, w, h, 8); c.fill(); c.fillStyle = '#ff9363'; rr(c, X + 6, Y + 6, w - 12, h / 2 - 6, 6); c.fill();
+    c.fillStyle = '#fff'; c.font = '800 16px system-ui'; c.textAlign = 'center'; c.fillText('HayaEats', cx, cy + 4); c.font = '700 10px system-ui'; c.fillText('RIDER HUB', cx, cy + 18);
+    c.font = '20px system-ui'; c.fillText('🛵', cx, Y + 26);
+    c.strokeStyle = '#c4532a'; c.lineWidth = 2; rr(c, X, Y, w, h, 8); c.stroke();
+  } else if (b.c === 'j') { // shrine: dark curved roof with gold ridge
+    c.fillStyle = '#4d3d36'; rr(c, X - 4, Y - 2, w + 8, h + 2, 12); c.fill(); c.fillStyle = '#5f4b42'; rr(c, X, Y + 2, w, h / 2, 10); c.fill();
+    c.fillStyle = '#d9b44a'; c.fillRect(X + 6, cy - 2, w - 12, 4);
+  }
+  drawDoorsOf(c, b);
+}
+function drawTree(c, t) {
+  c.fillStyle = 'rgba(30,50,30,.25)'; c.beginPath(); c.ellipse(t.x + 6, t.y + 8, t.r, t.r * 0.75, 0, 0, 7); c.fill();
+  const [a, b2, hl] = t.sakura ? ['#e99ab3', '#f4b9cb', '#fde1ea'] : ['#3f8a45', '#57a957', '#86c96f'];
+  c.fillStyle = a; for (let i = 0; i < 4; i++) { const an = i * 1.7 + hash(t.x, t.y) * 3; c.beginPath(); c.arc(t.x + Math.cos(an) * t.r * 0.45, t.y + Math.sin(an) * t.r * 0.45, t.r * 0.7, 0, 7); c.fill(); }
+  c.fillStyle = b2; c.beginPath(); c.arc(t.x - 2, t.y - 3, t.r * 0.68, 0, 7); c.fill();
+  c.fillStyle = hl; c.beginPath(); c.arc(t.x - 5, t.y - 7, t.r * 0.28, 0, 7); c.fill();
+}
+function drawVend(c, v) {
+  c.fillStyle = 'rgba(0,0,0,.25)'; c.fillRect(v.x - 10, v.y - 4, 24, 16);
+  c.fillStyle = '#d63a3a'; rr(c, v.x - 12, v.y - 8, 24, 16, 3); c.fill();
+  c.fillStyle = '#fff'; c.fillRect(v.x - 9, v.y - 5, 18, 5); c.fillStyle = '#7fd3ff'; c.fillRect(v.x - 9, v.y + 2, 18, 3);
+}
+function drawTorii(c, t) {
+  c.fillStyle = 'rgba(0,0,0,.2)'; c.fillRect(t.x - 20, t.y + 2, 44, 8);
+  c.fillStyle = '#d23c2a'; c.fillRect(t.x - 22, t.y - 6, 44, 7); c.fillStyle = '#2b2b2b'; c.fillRect(t.x - 24, t.y - 9, 48, 4);
+  c.fillStyle = '#b8321f'; c.beginPath(); c.arc(t.x - 15, t.y + 4, 4, 0, 7); c.arc(t.x + 15, t.y + 4, 4, 0, 7); c.fill();
+}
+function drawPoles(c) {
+  c.strokeStyle = 'rgba(40,40,45,.55)'; c.lineWidth = 1;
+  for (const line of poleLines) { if (line.length < 2) continue; for (const off of [-3, 3]) { c.beginPath(); line.forEach((p, i) => { const q = line[i - 1]; if (!q) { c.moveTo(p.x, p.y + off); return; } c.quadraticCurveTo((p.x + q.x) / 2, (p.y + q.y) / 2 + off + 6, p.x, p.y + off); }); c.stroke(); } }
+  for (const p of poles) { c.fillStyle = 'rgba(0,0,0,.25)'; c.beginPath(); c.arc(p.x + 3, p.y + 4, 5, 0, 7); c.fill(); c.fillStyle = '#8d8a84'; c.beginPath(); c.arc(p.x, p.y, 4.5, 0, 7); c.fill(); c.fillStyle = '#5c5a56'; c.fillRect(p.x - 9, p.y - 1.5, 18, 3); }
+}
+function drawParkedCars(c, x0, y0, x1, y1) {
+  for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) if (at(x, y) === 'P' && hash(x, y, 9) < 0.45 && x >= x0 - 1 && x <= x1 + 1 && y >= y0 - 1 && y <= y1 + 1) {
+    const col = ['#e8e8e8', '#3c6fb4', '#c94a4a', '#2f2f35', '#e9c46a'][Math.floor(hash(x, y, 2) * 5)], X = x * TS + 8, Y = y * TS + 4;
+    c.fillStyle = 'rgba(0,0,0,.25)'; rr(c, X + 3, Y + 3, 24, 34, 6); c.fill(); c.fillStyle = col; rr(c, X, Y, 24, 34, 6); c.fill();
+    c.fillStyle = 'rgba(30,50,70,.75)'; rr(c, X + 3, Y + 6, 18, 7, 2); c.fill(); rr(c, X + 3, Y + 24, 18, 5, 2); c.fill();
+  }
+}
+/* ---- chunk cache ---- */
+const CH = 10, CHP = CH * TS, cache = new Map();
+function chunk(cx, cy, s) {
+  const key = cx + ',' + cy + '@' + s; if (cache.has(key)) { const v = cache.get(key); cache.delete(key); cache.set(key, v); return v; }
+  const cv = document.createElement('canvas'); cv.width = Math.ceil(CHP * s); cv.height = Math.ceil(CHP * s);
+  const c = cv.getContext('2d'); c.scale(s, s); c.translate(-cx * CHP, -cy * CHP);
+  const x0 = cx * CH - 1, y0 = cy * CH - 1, x1 = x0 + CH + 2, y1 = y0 + CH + 2;
+  for (let y = y0; y < y1; y++) for (let x = x0; x < x1; x++) if (x >= 0 && y >= 0 && x < W && y < H) drawTile(c, x, y);
+  for (let y = y0; y < y1; y++) for (let x = x0; x < x1; x++) if (x >= 0 && y >= 0 && x < W && y < H) drawMarkings(c, x, y);
+  drawParkedCars(c, x0, y0, x1, y1);
+  const vis = b => b.x1 >= x0 - 1 && b.x0 <= x1 + 1 && b.y1 >= y0 - 1 && b.y0 <= y1 + 1;
+  buildings.filter(vis).forEach(b => bShadow(c, b)); buildings.filter(vis).forEach(b => drawBuilding(c, b));
+  const near = o => o.x > x0 * TS - 60 && o.x < x1 * TS + 60 && o.y > y0 * TS - 60 && o.y < y1 * TS + 60;
+  vend.filter(near).forEach(v => drawVend(c, v)); toriis.filter(near).forEach(t => drawTorii(c, t));
+  trees.filter(near).forEach(t => drawTree(c, t)); drawPoles(c);
+  cache.set(key, cv); while (cache.size > 24) cache.delete(cache.keys().next().value);
+  return cv;
+}
+/* ---- minimap ---- */
+const MM = document.createElement('canvas'); MM.width = W * 2; MM.height = H * 2;
+{ const c = MM.getContext('2d'); const col = { '=': '#6b707c', '#': '#6b707c', '+': '#6b707c', ':': '#cfc8b8', '@': '#cfc8b8', '*': '#cfc8b8', '~': '#5fb0e0', 'o': '#5fb0e0', '-': '#8d8378', '%': '#8d8378', 'f': '#bfe08a', 'P': '#7d828c', 'G': '#7fbf62', '_': '#e3d3a8', 'T': '#3f8a45' };
+  for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) { const t = at(x, y); c.fillStyle = col[t] || (BLD.includes(t) ? (t === 'X' ? '#ff7a45' : t === 'h' ? '#7a8aa6' : '#d8d2c6') : '#97cc76'); c.fillRect(x * 2, y * 2, 2, 2); } }
+
+/* ---- sprites ---- */
+function drawScooter(c, x, y, dir, wheel, rider, lean, bob) {
+  c.save(); c.translate(x, y + (bob || 0)); c.rotate(dir);
+  c.fillStyle = 'rgba(0,0,0,.28)'; c.beginPath(); c.ellipse(3, 4, 22, 10, 0, 0, 7); c.fill();
+  // wheels with a moving tread
+  for (const wx of [-14, 14]) { c.fillStyle = '#26262b'; rr(c, wx - 6, -3.5, 12, 7, 3); c.fill(); c.fillStyle = '#555'; const o = ((wheel * 0.6) % 4 + 4) % 4; for (let k = -6 + o; k < 6; k += 4) c.fillRect(wx + k, -3.5, 1.2, 7); }
+  c.fillStyle = '#f4efe6'; rr(c, -16, -7, 32, 14, 6); c.fill();                    // body
+  c.fillStyle = '#ff7a45'; rr(c, 4, -6.5, 12, 13, 5); c.fill();                     // front cowl
+  c.fillStyle = '#ff7a45'; rr(c, -21, -9, 13, 18, 3); c.fill(); c.fillStyle = '#fff'; c.fillRect(-18, -2, 7, 4);   // delivery box
+  c.strokeStyle = '#222'; c.lineWidth = 2.2; c.beginPath(); c.moveTo(13, -9); c.lineTo(13, 9); c.stroke();      // handlebar
+  c.fillStyle = '#9ad'; c.fillRect(11.5, -11, 3, 3); c.fillRect(11.5, 8, 3, 3);
+  if (rider) { c.save(); c.translate(0, lean || 0);
+    c.fillStyle = '#2a8f8a'; c.beginPath(); c.ellipse(-2, 0, 7, 10, 0, 0, 7); c.fill();            // shoulders / jacket
+    c.fillStyle = '#2a8f8a'; c.fillRect(2, -8, 9, 3); c.fillRect(2, 5, 9, 3);                        // arms to bars
+    c.fillStyle = '#ffffff'; c.beginPath(); c.arc(1, 0, 6.5, 0, 7); c.fill();                         // helmet
+    c.fillStyle = '#ff7a45'; c.fillRect(-4, -1.2, 10, 2.4); c.fillStyle = '#334'; c.fillRect(5, -3.5, 2, 7);
+    c.restore(); }
+  c.restore();
+}
+function drawWalker(c, x, y, dir, phase, moving) {
+  c.save(); c.translate(x, y); c.rotate(dir);
+  c.fillStyle = 'rgba(0,0,0,.25)'; c.beginPath(); c.ellipse(2, 3, 10, 8, 0, 0, 7); c.fill();
+  const sw = moving ? Math.sin(phase) * 5 : 0;
+  c.fillStyle = '#3a3f55'; c.beginPath(); c.ellipse(sw, -4, 4, 2.6, 0, 0, 7); c.ellipse(-sw, 4, 4, 2.6, 0, 0, 7); c.fill();   // feet
+  c.fillStyle = '#ff7a45'; rr(c, -13, -7, 9, 14, 2); c.fill(); c.fillStyle = '#fff'; c.fillRect(-11, -1.5, 5, 3);   // bag on back
+  c.fillStyle = '#2a8f8a'; c.beginPath(); c.ellipse(-1, 0, 6, 9, 0, 0, 7); c.fill();                                  // shoulders
+  c.fillStyle = '#f1c9a5'; c.beginPath(); c.arc(1 - sw * 0.2, -8, 2.4, 0, 7); c.arc(1 + sw * 0.2, 8, 2.4, 0, 7); c.fill(); // hands
+  c.fillStyle = '#2b2430'; c.beginPath(); c.arc(1, 0, 5.6, 0, 7); c.fill();                                           // hair
+  c.fillStyle = '#4a3f52'; c.beginPath(); c.arc(-0.5, -1.5, 2.2, 0, 7); c.fill();
+  c.restore();
+}
+function drawMarker(c, x, y, t, label, current) {
+  const pulse = (Math.sin(t * 3) + 1) / 2;
+  if (current) {
+    const g = c.createRadialGradient(x, y, 2, x, y, 34 + pulse * 8); g.addColorStop(0, 'rgba(255,214,120,.75)'); g.addColorStop(0.5, 'rgba(255,150,70,.35)'); g.addColorStop(1, 'rgba(255,120,60,0)');
+    c.fillStyle = g; c.beginPath(); c.arc(x, y, 42, 0, 7); c.fill();
+    c.save(); c.translate(x, y); c.rotate(t * 0.8); c.strokeStyle = 'rgba(255,240,200,.9)'; c.lineWidth = 2; c.setLineDash([6, 6]); c.beginPath(); c.arc(0, 0, 20 + pulse * 3, 0, 7); c.stroke(); c.restore(); c.setLineDash([]);
+  }
+  const by = y - 30 - Math.abs(Math.sin(t * 2.2)) * 6, s = current ? 1 : 0.7;
+  c.save(); c.translate(x, by); c.scale(s, s);
+  c.fillStyle = 'rgba(0,0,0,.25)'; c.beginPath(); c.ellipse(0, 30 / s - 2, 6, 3, 0, 0, 7); c.fill();
+  c.fillStyle = current ? '#ff7a45' : 'rgba(255,122,69,.7)'; c.beginPath(); c.arc(0, 0, 12, Math.PI * 0.8, Math.PI * 2.2); c.lineTo(0, 20); c.closePath(); c.fill();
+  c.strokeStyle = '#fff'; c.lineWidth = 2; c.stroke();
+  c.fillStyle = '#fff'; rr(c, -5, -5, 10, 9, 2); c.fill(); c.fillStyle = '#ff7a45'; c.fillRect(-2, -8, 4, 3);
+  c.restore();
+  if (label) { c.font = '700 12px system-ui'; const w = c.measureText(label).width + 14; c.fillStyle = current ? 'rgba(20,22,30,.85)' : 'rgba(20,22,30,.55)'; rr(c, x - w / 2, by - 34, w, 20, 10); c.fill(); c.fillStyle = '#fff'; c.textAlign = 'center'; c.fillText(label, x, by - 20); }
+}
+
+/* ---- time-of-day lighting ---- */
+function lightFor(clock) {
+  const h = (clock / 3600) % 24;
+  const keys = [[6, [255, 200, 160, 0.12]], [9, [255, 245, 220, 0.02]], [14, [255, 230, 180, 0.05]], [16.5, [255, 180, 100, 0.14]], [18.3, [140, 80, 150, 0.28]], [19.5, [30, 40, 100, 0.45]], [24, [15, 22, 70, 0.55]]];
+  let a = keys[0], b = keys[keys.length - 1];
+  for (let i = 0; i < keys.length - 1; i++) if (h >= keys[i][0] && h < keys[i + 1][0]) { a = keys[i]; b = keys[i + 1]; break; }
+  const f = Math.max(0, Math.min(1, (h - a[0]) / (b[0] - a[0] || 1))), mix = a[1].map((v, i) => v + (b[1][i] - v) * f);
+  return { rgba: `rgba(${mix[0] | 0},${mix[1] | 0},${mix[2] | 0},${mix[3].toFixed(3)})`, night: Math.max(0, (mix[3] - 0.2) / 0.35) };
+}
+const LIGHTS = [...vend.map(v => ({ x: v.x, y: v.y, r: 60, c: '255,250,220' })), ...poles.filter((p, i) => i % 2 === 0).map(p => ({ x: p.x, y: p.y + 10, r: 70, c: '255,220,150' })),
+  ...buildings.filter(b => 'kXSs'.includes(b.c)).map(b => ({ x: (b.x0 + b.x1 + 1) / 2 * TS, y: (b.y1 + 1.2) * TS, r: 110, c: b.c === 'k' ? '230,255,255' : '255,210,150' }))];
+
+/* ---- camera + draw ---- */
+const cam = { x: 0, y: 0, init: false };
+function draw(c, Wc, Hc, w, clock, dt, dpr) {
+  const p = w.p, zoom = Math.max(0.75, Math.min(1.3, Wc / 430));
+  const tx = p.x + Math.cos(p.dir) * p.speed * 0.45, ty = p.y + Math.sin(p.dir) * p.speed * 0.45;
+  if (!cam.init) { cam.x = tx; cam.y = ty; cam.init = true; }
+  const k = 1 - Math.exp(-dt * 5); cam.x += (tx - cam.x) * k; cam.y += (ty - cam.y) * k;
+  const vw = Wc / zoom, vh = Hc / zoom;
+  let ox = Math.max(0, Math.min(PW - vw, cam.x - vw / 2)), oy = Math.max(0, Math.min(PH - vh, cam.y - vh / 2));
+  c.fillStyle = PAL.grass; c.fillRect(0, 0, Wc, Hc);
+  c.save(); c.scale(zoom, zoom); c.translate(-ox, -oy);
+  const s = Math.min(1.6, Math.round(dpr * zoom * 4) / 4);
+  for (let cy = Math.floor(oy / CHP); cy <= Math.floor((oy + vh) / CHP); cy++) for (let cx = Math.floor(ox / CHP); cx <= Math.floor((ox + vw) / CHP); cx++) {
+    if (cx < 0 || cy < 0 || cx * CHP >= PW || cy * CHP >= PH) continue;
+    c.drawImage(chunk(cx, cy, s), cx * CHP, cy * CHP, CHP, CHP);
+  }
+  const t = performance.now() / 1000;
+  w.jobs.forEach((j, i) => { if (!j.done && i !== w.cur) drawMarker(c, j.door.x, j.door.y, t + i, `${i + 1}`, false); });
+  if (p.onFoot) drawScooter(c, p.bx, p.by, p.bdir || 0, 0, false, 0, 0);
+  if (p.onFoot) drawWalker(c, p.x, p.y, p.wdir ?? p.dir, p.walk || 0, p.speed > 5);
+  else drawScooter(c, p.x, p.y, p.dir, p.wheel || 0, true, p.lean || 0, p.speed > 10 ? Math.sin(t * 18) * 0.5 : 0);
+  const j = w.jobs[w.cur]; if (j) drawMarker(c, j.door.x, j.door.y, t, `${w.cur + 1} · ${j.door.name}`, true);
+  c.restore();
+  // lighting
+  const L = lightFor(clock);
+  c.fillStyle = L.rgba; c.fillRect(0, 0, Wc, Hc);
+  if (L.night > 0.05) {
+    c.save(); c.globalCompositeOperation = 'lighter';
+    for (const l of LIGHTS) { const sx = (l.x - ox) * zoom, sy = (l.y - oy) * zoom, r = l.r * zoom; if (sx < -r || sy < -r || sx > Wc + r || sy > Hc + r) continue;
+      const g = c.createRadialGradient(sx, sy, 0, sx, sy, r); g.addColorStop(0, `rgba(${l.c},${0.35 * L.night})`); g.addColorStop(1, `rgba(${l.c},0)`); c.fillStyle = g; c.fillRect(sx - r, sy - r, r * 2, r * 2); }
+    if (!p.onFoot) { const sx = (p.x - ox) * zoom, sy = (p.y - oy) * zoom; c.translate(sx, sy); c.rotate(p.dir); const g = c.createRadialGradient(40, 0, 0, 40, 0, 90 * zoom); g.addColorStop(0, `rgba(255,250,210,${0.4 * L.night})`); g.addColorStop(1, 'rgba(255,250,210,0)'); c.fillStyle = g; c.beginPath(); c.moveTo(10, 0); c.arc(10, 0, 110 * zoom, -0.45, 0.45); c.closePath(); c.fill(); }
+    c.restore();
+  }
+  return { ox, oy, zoom };
+}
+function drawMinimap(c, x, y, mw, w) {
+  const mh = mw * H / W, sx = mw / W, p = w.p;
+  c.save(); rr(c, x - 3, y - 3, mw + 6, mh + 6, 8); c.fillStyle = 'rgba(15,17,24,.75)'; c.fill();
+  rr(c, x, y, mw, mh, 5); c.clip(); c.globalAlpha = 0.95; c.drawImage(MM, x, y, mw, mh); c.globalAlpha = 1;
+  w.jobs.forEach((j, i) => { if (j.done) return; c.fillStyle = i === w.cur ? '#ffcf5a' : 'rgba(255,160,90,.9)'; c.beginPath(); c.arc(x + j.door.tx * sx + sx / 2, y + j.door.ty * sx + sx / 2, i === w.cur ? 3.5 : 2.4, 0, 7); c.fill(); });
+  c.fillStyle = '#ff7a45'; c.fillRect(x + spawn.tx * sx - 1.5, y + spawn.ty * sx - 1.5, 3, 3);
+  c.translate(x + p.x / TS * sx, y + p.y / TS * sx); c.rotate(p.onFoot ? 0 : p.dir); c.fillStyle = '#fff'; c.strokeStyle = '#111'; c.lineWidth = 1;
+  c.beginPath(); c.moveTo(5, 0); c.lineTo(-3.5, -3.5); c.lineTo(-2, 0); c.lineTo(-3.5, 3.5); c.closePath(); c.fill(); c.stroke();
+  c.restore();
+  return mh;
+}
+window.Town = { TS, W, H, PW, PH, spawn, doors, buildings, move, speedMult, pickJobs, distFrom, draw, drawMinimap, lightFor, resetCamera: () => { cam.init = false; }, tileAt, isSolid };
+})();
 
 </script>
 <script>
@@ -616,47 +1071,14 @@ function crash() {
   fireBeat(b);
 }
 
-/* ---------- shift world ---------- */
-const MAP = { W: 3200, H: 2400, grid: 400, road: 30 };
+/* ---------- shift world (map + art in town.js) ---------- */
 function rng(seed) { let s = seed >>> 0; return () => ((s = (s * 1664525 + 1013904223) >>> 0) / 4294967296); }
-function buildTown() {
-  const r = rng(1234), blocks = [], doors = [];
-  for (let gx = 0; gx < MAP.W / MAP.grid; gx++) for (let gy = 0; gy < MAP.H / MAP.grid; gy++) {
-    const x0 = gx * MAP.grid + 230, y0 = gy * MAP.grid + 230, w = MAP.grid - 60, h = MAP.grid - 60;
-    let type = r() < 0.3 ? 'rice' : r() < 0.15 ? 'park' : 'houses';
-    if (gx === 3 && gy === 0) type = 'station'; if (gy === 3 && (gx === 3 || gx === 4)) type = 'shotengai';
-    if (gx >= 7) type = r() < 0.5 ? 'hill' : 'houses';
-    blocks.push({ x0, y0, w, h, type, col: `hsl(${Math.floor(r() * 360)},35%,55%)` });
-    if (type === 'houses' || type === 'shotengai' || type === 'hill') {
-      for (let i = 0; i < 3; i++) {
-        const side = Math.floor(r() * 4), t = 60 + r() * (w - 120);
-        const d = side === 0 ? { x: x0 + t, y: y0 + 40 } : side === 1 ? { x: x0 + w - 40, y: y0 + t } : side === 2 ? { x: x0 + t, y: y0 + h - 40 } : { x: x0 + 40, y: y0 + t };
-        d.name = ['Sato', 'Suzuki', 'Tanaka', 'Watanabe', 'Ito', 'Yamamoto', 'Nakamura', 'Kobayashi', 'Kato', 'Yoshida', 'Yamada', 'Sasaki', 'Matsumoto', 'Inoue', 'Kimura'][Math.floor(r() * 15)];
-        doors.push(d);
-      }
-    }
-  }
-  return { blocks, doors };
-}
-const TOWN = buildTown();
-function onRoad(x, y) {
-  const g = MAP.grid, rr = MAP.road;
-  const mx = ((x - 200) % g + g) % g, my = ((y - 200) % g + g) % g;
-  return mx < rr || mx > g - rr || my < rr || my > g - rr;
-}
-function zoneMult(x, y) { let m = 1; if (x > 2800) m *= 0.65; if (x > 1380 && x < 1820 && y < 620) m *= 0.75; return m; }
 function startShift(diffKey, late) {
-  const dif = C.difficulties[diffKey], r = rng((Date.now() & 0xffff) + 7);
-  const hub = { x: 1800, y: 1000 };
-  let prev = hub; const jobs = []; const used = new Set();
-  for (let i = 0; i < 3; i++) {
-    let cands = TOWN.doors.filter((d, j) => !used.has(j) && (() => { const md = Math.abs(d.x - prev.x) + Math.abs(d.y - prev.y); return md >= dif.leg[0] && md <= dif.leg[1]; })());
-    if (!cands.length) cands = TOWN.doors.filter((d, j) => !used.has(j));
-    const d = cands[Math.floor(r() * cands.length)]; used.add(TOWN.doors.indexOf(d));
-    jobs.push({ door: d, legTime: 0, pay: 0, done: false, crashed: false }); prev = d;
-  }
+  const dif = C.difficulties[diffKey], r = rng((Date.now() ^ (Math.random() * 1e9)) >>> 0), sp = Town.spawn;
+  const jobs = Town.pickJobs(dif.legTiles, r, C.firstLegScale).map(d => ({ door: d, legTime: 0, pay: 0, done: false, crashed: false }));
   world = { diff: diffKey, dif, late: !!late, mult: late ? C.lateShift.mult : 1, jobs, cur: 0, timeLeft: C.shiftSeconds, elapsed: 0, legStart: 0, done: false,
-    p: { x: hub.x, y: hub.y, dir: 0, speed: 0, onFoot: false, bx: hub.x, by: hub.y, handover: 0, stun: 0, wob: 0, brake: false }, msg: 'Ride to customer 1 →' };
+    p: { x: sp.x, y: sp.y, dir: -Math.PI / 2, speed: 0, onFoot: false, bx: sp.x, by: sp.y, bdir: 0, handover: 0, stun: 0, wob: 0, brake: false, wheel: 0, walk: 0, lean: 0 }, msg: 'Ride to customer 1 →' };
+  Town.resetCamera();
   S.slot = 'shift'; S.clock = late ? hm('20:30') : hm(day().shift.startClock);
   S.q = { slot: late ? 'lateShift' : 'shift', idx: 0 };
   if (late) { S.lateDone = true; addM({ N: C.lateShift.N }, 'late shift'); }
@@ -686,29 +1108,33 @@ function tickShift(dt) {
   let iy = (keys.ArrowDown || keys.s ? 1 : 0) - (keys.ArrowUp || keys.w ? 1 : 0) + joy.y;
   const mag = Math.hypot(ix, iy); if (mag > 1) { ix /= mag; iy /= mag; }
   if (p.stun > 0) { p.stun -= dt; ix = iy = 0; }
-  if (p.handover > 0) {
-    p.handover -= dt; ix = iy = 0;
-    if (p.handover <= 0) completeJob();
-  }
+  if (p.handover > 0) { p.handover -= dt; ix = iy = 0; if (p.handover <= 0) completeJob(); }
   if (p.onFoot) {
-    const sp = C.walkSpeed; p.x += ix * sp * dt; p.y += iy * sp * dt; p.speed = Math.hypot(ix, iy) * sp;
+    const sp = C.walkSpeed * Town.speedMult(p.x, p.y, true), m = Math.min(1, Math.hypot(ix, iy));
+    if (m > 0.1) { p.wdir = Math.atan2(iy, ix); p.walk += dt * 11; }
+    Town.move(p, ix * sp * dt, iy * sp * dt, 7); p.speed = m * sp;
     const j = w.jobs[w.cur];
-    if (j && !j.done && p.handover <= 0 && Math.hypot(p.x - j.door.x, p.y - j.door.y) < 30) { p.handover = 1.2; w.msg = 'Handing over the food…'; }
+    if (j && !j.done && p.handover <= 0 && Math.hypot(p.x - j.door.x, p.y - j.door.y) < 26) { p.handover = C.handoverSec; w.msg = 'Handing over the food…'; }
   } else {
-    const max = C.bikeMaxSpeed * (onRoad(p.x, p.y) ? 1 : 0.35) * zoneMult(p.x, p.y);
+    const max = C.bikeMaxSpeed * Town.speedMult(p.x, p.y, false);
     const phoneUp = S.phone.open;
+    let turn = 0;
     if (mag > 0.1 && !p.brake) {
       let target = Math.atan2(iy, ix);
       if (phoneUp && p.speed > 20) { p.wob += dt * 9; target += Math.sin(p.wob) * 0.35 * (S.flags.mount ? 0.5 : 1); }
-      let da = ((target - p.dir + Math.PI * 3) % (Math.PI * 2)) - Math.PI; p.dir += clamp(da, -6 * dt, 6 * dt);
-      p.speed = Math.min(max * Math.min(1, mag), p.speed + 260 * dt);
-    } else p.speed = Math.max(0, p.speed - (p.brake ? 420 : 160) * dt);
-    if (p.speed > max) p.speed = Math.max(max, p.speed - 300 * dt);
+      const da = ((target - p.dir + Math.PI * 3) % (Math.PI * 2)) - Math.PI;
+      turn = clamp(da, -C.bikeTurnRate * dt, C.bikeTurnRate * dt); p.dir += turn;
+      const sharp = Math.abs(da) > 1.1; // tight corners: ease off
+      p.speed = sharp ? Math.max(p.speed - C.bikeCornerBrake * dt, 25) : Math.min(max * Math.min(1, mag), p.speed + C.bikeAccel * dt);
+    } else p.speed = Math.max(0, p.speed - (p.brake ? 380 : 140) * dt);
+    if (p.speed > max) p.speed = Math.max(max, p.speed - 260 * dt);
     if (p.brake && p.speed < 5) p.brake = false;
-    p.x += Math.cos(p.dir) * p.speed * dt; p.y += Math.sin(p.dir) * p.speed * dt;
-    if (phoneUp && p.speed > 110 && Math.random() < dt * 0.06 * (S.flags.mount ? 0.5 : 1)) crash();
+    p.lean += ((turn / Math.max(dt, 1e-4)) * 0.6 - p.lean) * Math.min(1, dt * 8);
+    const dx = Math.cos(p.dir) * p.speed * dt, dy = Math.sin(p.dir) * p.speed * dt;
+    if (Town.move(p, dx, dy, 10)) p.speed *= 0.55; // bumped a wall / building
+    p.wheel += p.speed * dt;
+    if (phoneUp && p.speed > 95 && Math.random() < dt * 0.06 * (S.flags.mount ? 0.5 : 1)) crash();
   }
-  p.x = clamp(p.x, 10, MAP.W - 10); p.y = clamp(p.y, 10, MAP.H - 10);
   S.clock += dt * C.shiftGameSecPerReal;
 }
 function completeJob() {
@@ -718,7 +1144,7 @@ function completeJob() {
   sendFrom('HayaEats', `Delivered to ${j.door.name}: ${yen(j.pay)} (${j.legTime.toFixed(1)}s)`, { kind: 'ambient' });
   w.cur++; w.legStart = w.elapsed;
   if (w.cur >= w.jobs.length) { endShift('all'); return; }
-  w.msg = `Walk back to your bike, then ride to customer ${w.cur + 1}`;
+  w.msg = `Back to the scooter, then ride to customer ${w.cur + 1}`;
 }
 function action() { // big button / E / Space
   if (S.slot !== 'shift' || !world || world.done) return;
@@ -726,7 +1152,7 @@ function action() { // big button / E / Space
   if (p.handover > 0 || p.stun > 0) return;
   if (!p.onFoot) {
     if (p.speed >= 5) { p.brake = true; return; }
-    p.onFoot = true; p.bx = p.x; p.by = p.y; p.speed = 0; world.msg = 'On foot: walk to the door';
+    p.onFoot = true; p.bx = p.x; p.by = p.y; p.bdir = p.dir; p.wdir = p.dir; p.speed = 0; world.msg = 'On foot: walk to the glowing door';
   } else if (Math.hypot(p.x - p.bx, p.y - p.by) < 40) { p.onFoot = false; p.x = p.bx; p.y = p.by; world.msg = `Ride to customer ${world.cur + 1}`; }
   renderPhone(true);
 }
@@ -758,52 +1184,29 @@ function drawRoom(W, H) {
   if (S && (S.slot === 'morning' || S.slot === 'evening')) { ctx.fillStyle = '#ffb36b'; ctx.fillText(S.slot === 'morning' ? 'HayaEats shift starts at 13:00' : 'Bed at 23:30', W / 2, H * 0.84 + 62); }
 }
 function drawTown(W, H) {
-  const w = world, p = w.p, cx = p.x - W / 2, cy = p.y - H / 2;
-  ctx.fillStyle = '#3d6b3a'; ctx.fillRect(0, 0, W, H);
-  ctx.save(); ctx.translate(-cx, -cy);
-  for (const b of TOWN.blocks) {
-    if (b.x0 + b.w < cx || b.x0 > cx + W || b.y0 + b.h < cy || b.y0 > cy + H) continue;
-    if (b.type === 'rice') { ctx.fillStyle = '#7fb55a'; ctx.fillRect(b.x0, b.y0, b.w, b.h); ctx.strokeStyle = '#6a9c4a'; for (let y = b.y0 + 12; y < b.y0 + b.h; y += 16) { ctx.beginPath(); ctx.moveTo(b.x0, y); ctx.lineTo(b.x0 + b.w, y); ctx.stroke(); } }
-    else if (b.type === 'park') { ctx.fillStyle = '#2f7d3a'; ctx.fillRect(b.x0, b.y0, b.w, b.h); }
-    else if (b.type === 'hill') { ctx.fillStyle = '#4c5e36'; ctx.fillRect(b.x0, b.y0, b.w, b.h); ctx.strokeStyle = '#5d7244'; for (let r = 40; r < 170; r += 30) { ctx.beginPath(); ctx.arc(b.x0 + b.w / 2, b.y0 + b.h / 2, r, 0, 7); ctx.stroke(); } }
-    else if (b.type === 'station') { ctx.fillStyle = '#8a8f9e'; ctx.fillRect(b.x0, b.y0, b.w, b.h); ctx.fillStyle = '#333'; ctx.fillRect(b.x0, b.y0 + b.h / 2 - 6, b.w, 12); ctx.fillStyle = '#fff'; ctx.font = '600 22px system-ui'; ctx.textAlign = 'center'; ctx.fillText('Minase Stn 🚉', b.x0 + b.w / 2, b.y0 + 40); }
-    else { ctx.fillStyle = b.type === 'shotengai' ? '#b5866a' : '#9c9a86'; ctx.fillRect(b.x0, b.y0, b.w, b.h);
-      if (b.type === 'shotengai') { ctx.fillStyle = '#fff'; ctx.font = '600 18px system-ui'; ctx.textAlign = 'center'; ctx.fillText('shotengai', b.x0 + b.w / 2, b.y0 + b.h / 2); } }
-  }
-  ctx.fillStyle = '#4a4a52'; // roads
-  for (let x = 200; x < MAP.W; x += MAP.grid) ctx.fillRect(x - MAP.road, 0, MAP.road * 2, MAP.H);
-  for (let y = 200; y < MAP.H; y += MAP.grid) ctx.fillRect(0, y - MAP.road, MAP.W, MAP.road * 2);
-  ctx.fillStyle = '#d8d8a0';
-  for (let x = 200; x < MAP.W; x += MAP.grid) for (let y = 0; y < MAP.H; y += 40) ctx.fillRect(x - 1, y, 2, 18);
-  for (const d of TOWN.doors) { ctx.fillStyle = '#c96'; ctx.fillRect(d.x - 12, d.y - 12, 24, 24); }
-  ctx.fillStyle = '#ff7a45'; ctx.fillRect(1760, 960, 80, 80); ctx.fillStyle = '#111'; ctx.font = '600 14px system-ui'; ctx.textAlign = 'center'; ctx.fillText('HayaEats', 1800, 1005);
-  const j = w.jobs[w.cur], t = performance.now() / 300;
-  if (j) { ctx.strokeStyle = '#ffde59'; ctx.lineWidth = 4; ctx.beginPath(); ctx.arc(j.door.x, j.door.y, 26 + Math.sin(t) * 5, 0, 7); ctx.stroke(); ctx.lineWidth = 1;
-    ctx.fillStyle = '#fff'; ctx.font = '600 15px system-ui'; ctx.fillText(`${w.cur + 1}. ${j.door.name}`, j.door.x, j.door.y - 36); }
-  if (p.onFoot) { ctx.fillStyle = '#ff7a45'; ctx.fillRect(p.bx - 14, p.by - 6, 28, 12); }
-  ctx.save(); ctx.translate(p.x, p.y);
-  if (p.onFoot) { ctx.fillStyle = '#ffd27f'; ctx.beginPath(); ctx.arc(0, 0, 10, 0, 7); ctx.fill(); }
-  else { ctx.rotate(p.dir); ctx.fillStyle = p.stun > 0 ? '#f55' : '#ff7a45'; ctx.fillRect(-16, -7, 32, 14); ctx.fillStyle = '#111'; ctx.fillRect(8, -5, 8, 10); }
-  ctx.restore(); ctx.restore();
-  // pointer to target
-  if (j) { const a = Math.atan2(j.door.y - p.y, j.door.x - p.x), dist = Math.hypot(j.door.x - p.x, j.door.y - p.y);
-    if (dist > 120) { ctx.save(); ctx.translate(W / 2 + Math.cos(a) * 70, H / 2 + Math.sin(a) * 70); ctx.rotate(a); ctx.fillStyle = '#ffde59'; ctx.beginPath(); ctx.moveTo(14, 0); ctx.lineTo(-8, -9); ctx.lineTo(-8, 9); ctx.fill(); ctx.restore(); } }
-  // minimap
-  const mw = 110, mh = mw * MAP.H / MAP.W, mx = W - mw - 8, my = 86;
-  ctx.fillStyle = 'rgba(0,0,0,.55)'; ctx.fillRect(mx, my, mw, mh);
-  ctx.fillStyle = '#ffde59'; w.jobs.forEach((jj, i) => { if (!jj.done) ctx.fillRect(mx + jj.door.x / MAP.W * mw - 2, my + jj.door.y / MAP.H * mh - 2, i === w.cur ? 6 : 4, i === w.cur ? 6 : 4); });
-  ctx.fillStyle = '#fff'; ctx.fillRect(mx + p.x / MAP.W * mw - 2, my + p.y / MAP.H * mh - 2, 4, 4);
+  const w = world, p = w.p, dpr = Math.min(2, window.devicePixelRatio || 1);
+  const now = performance.now(), dt = Math.min(0.05, (now - (drawTown.last || now)) / 1000); drawTown.last = now;
+  const view = Town.draw(ctx, W, H, w, S.clock, dt, dpr);
+  const j = w.jobs[w.cur];
+  // off-screen pointer to the current door
+  if (j) { const sx = (j.door.x - view.ox) * view.zoom, sy = (j.door.y - view.oy) * view.zoom;
+    if (sx < 20 || sy < 70 || sx > W - 20 || sy > H - 20) { const a = Math.atan2(sy - H / 2, sx - W / 2), R = Math.min(W, H) * 0.36;
+      ctx.save(); ctx.translate(W / 2 + Math.cos(a) * R, H / 2 + Math.sin(a) * R); ctx.rotate(a); ctx.fillStyle = '#ff7a45'; ctx.strokeStyle = '#fff'; ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.moveTo(16, 0); ctx.lineTo(-8, -11); ctx.lineTo(-3, 0); ctx.lineTo(-8, 11); ctx.closePath(); ctx.fill(); ctx.stroke(); ctx.restore(); } }
+  // minimap: bottom-right, above the phone button (clear of the top banner)
+  const mw = Math.min(130, W * 0.32), mh = mw * Town.H / Town.W;
+  Town.drawMinimap(ctx, W - mw - 14, H - 236 - mh, mw, w);
   // HUD
-  ctx.fillStyle = 'rgba(0,0,0,.6)'; ctx.fillRect(0, 0, W, 50);
-  ctx.textAlign = 'left'; ctx.font = '700 22px system-ui'; ctx.fillStyle = w.timeLeft < 20 ? '#ff6b6b' : '#fff';
-  const tl = Math.ceil(w.timeLeft); ctx.fillText(`⏱ ${Math.floor(tl / 60)}:${String(tl % 60).padStart(2, '0')}`, 54, 33);
-  ctx.font = '14px system-ui'; ctx.fillStyle = '#ddd';
+  const g = ctx.createLinearGradient(0, 0, 0, 64); g.addColorStop(0, 'rgba(10,12,18,.85)'); g.addColorStop(1, 'rgba(10,12,18,0)'); ctx.fillStyle = g; ctx.fillRect(0, 0, W, 64);
+  ctx.textAlign = 'left'; ctx.font = '800 24px system-ui'; ctx.fillStyle = w.timeLeft < 20 ? '#ff6b6b' : '#fff';
+  const tl = Math.ceil(w.timeLeft); ctx.fillText(`⏱ ${Math.floor(tl / 60)}:${String(tl % 60).padStart(2, '0')}`, 40, 32);
+  ctx.font = '600 13px system-ui'; ctx.fillStyle = '#e6e6ee';
   const leg = w.elapsed - w.legStart, proj = j ? Math.round(w.dif.maxPay * clamp(w.dif.par / Math.max(leg, 0.01), 0.4, 1) * w.mult * (j.crashed ? .5 : 1)) : 0;
-  ctx.fillText(`Job ${Math.min(w.cur + 1, 3)}/3 · leg ${leg.toFixed(0)}s/${w.dif.par}s · ${yen(proj)}`, 150, 22);
-  const state = p.handover > 0 ? 'Handover' : p.onFoot ? 'On foot (safe)' : p.speed < 5 ? 'Stopped (safe)' : 'Riding';
+  ctx.fillText(`Job ${Math.min(w.cur + 1, 3)}/3 · ${leg.toFixed(0)}s / par ${w.dif.par}s · ${yen(proj)}`, 150, 22);
+  const state = p.handover > 0 ? 'Handing over' : p.onFoot ? 'On foot · safe to reply' : p.speed < 5 ? 'Stopped · safe to reply' : 'Riding';
   ctx.fillStyle = state === 'Riding' ? '#ffb36b' : '#8fe08f'; ctx.fillText(state + (S.pending ? ' · 🔴 Yui waiting' : ''), 150, 40);
-  ctx.fillStyle = 'rgba(0,0,0,.55)'; ctx.fillRect(0, H - 220, W, 0);
-  if (w.msg) { ctx.textAlign = 'center'; ctx.font = '600 15px system-ui'; ctx.fillStyle = '#fff'; ctx.fillText(w.msg, W / 2, 72); }
+  if (w.msg) { ctx.font = '700 14px system-ui'; const tw = ctx.measureText(w.msg).width + 22; ctx.fillStyle = 'rgba(15,17,24,.7)';
+    ctx.beginPath(); ctx.roundRect ? ctx.roundRect(W / 2 - tw / 2, 50, tw, 26, 13) : ctx.rect(W / 2 - tw / 2, 50, tw, 26); ctx.fill(); ctx.fillStyle = '#fff'; ctx.textAlign = 'center'; ctx.fillText(w.msg, W / 2, 68); }
 }
 
 /* ---------- phone UI ---------- */
@@ -1079,7 +1482,7 @@ function title() {
   const saved = load();
   showOverlay(`<h2>Last Train Home</h2><p class="muted">Day 1 · Move-in. Yui's moving to Tokyo for uni. You're staying in Minase, doing HayaEats deliveries to save ${yen(C.tripTarget)} so you can visit her.</p>
     <p class="muted" style="font-size:13px">Personal prototype. Placeholder art. Progress saves on this device.</p>
-    <p class="muted" style="font-size:11px;opacity:.7" id="buildStamp">2026-10-16 07:31 BST · day1 web</p>
+    <p class="muted" style="font-size:11px;opacity:.7" id="buildStamp">2026-10-16 07:43 BST · day1 web</p>
     <div class="diff">${saved && saved.slot !== 'title' ? '<button class="primary" id="cont">Continue</button>' : ''}<button ${saved && saved.slot !== 'title' ? '' : 'class="primary"'} id="newg">New game</button></div>`);
   if ($('cont')) $('cont').onclick = () => { S = saved; resume(); };
   $('newg').onclick = () => { localStorage.removeItem(SAVE_KEY); S = newState(); hideOverlay(); toMorning(); };
@@ -1108,7 +1511,7 @@ function frame(t) {
   requestAnimationFrame(frame);
 }
 window.addEventListener('resize', resize);
-window.__game = { skipAhead, get S() { return S; }, get world() { return world; }, answer, action, startShift, sleep, toShiftSelect, keys, joy };
+window.__game = { skipAhead, tickShift, get S() { return S; }, get world() { return world; }, answer, action, startShift, sleep, toShiftSelect, keys, joy };
 resize(); title(); requestAnimationFrame(frame);
 })();
 
